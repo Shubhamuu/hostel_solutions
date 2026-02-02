@@ -7,7 +7,7 @@ const EMAIL_PORT = require("../constants/getenv").EMAIL_PORT;
 const EMAIL_USER = require("../constants/getenv").EMAIL_USER;
 const EMAIL_PASS = require("../constants/getenv").EMAIL_PASS;
 //const generateVerificationCode = () => crypto.randomBytes(3).toString("hex");
-const Email_USER = process.env.EMAIL_USER;
+
 const transporter = nodemailer.createTransport({
   host: EMAIL_HOST,
   port: EMAIL_PORT,
@@ -22,7 +22,7 @@ const codeExpiry = new Date(Date.now() + 15 * 60 * 1000);
 const sendVerificationEmail = async (email, name, code) => {
    console.log("from sendverification",email, name, code);
     const mailOptions = {
-        from:`"Hostel Management" <${process.env.EMAIL_USER}>`,
+        from:`"Hostel Management" <${EMAIL_USER}>`,
         to: email,
         subject: "Email Verification",
         text: `Hello ${name},\n\nYour verification code is: ${code}\n\nThis code is valid for 15 minutes.\n\nThank you!`,
@@ -39,7 +39,7 @@ const sendVerificationEmail = async (email, name, code) => {
 
 const successRegistration = async (name, email ) => {
     const mailOptions = {
-        from: `"Hostel Management" <${process.env.EMAIL_USER}>`,
+        from: `"Hostel Management" <${EMAIL_USER}>`,
         to: email,
         subject: "Registration Successful",
         text: `Hello ${name|| User},\n\nYou have successfully registered. Please proceed to login.\n\nThank you!`,

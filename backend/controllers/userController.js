@@ -5,6 +5,7 @@ const getUserFromToken = require('../utils/getuserFromToken');
 const{verifyToken} = require('../utils/jwtauth');
 const User = require('../models/User');
 const Room = require('../models/Room');
+const Hostel = require('../models/hostel');
 exports.getme = async (req, res) => {
 token = req.headers.authorization?.split(' ')[1];
 

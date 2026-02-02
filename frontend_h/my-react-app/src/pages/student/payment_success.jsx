@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate, useSearchParams  } from "react-router";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import { apiprivate } from "../../services/api"; // axios instance with token
 
 export default function PaymentSuccess() {
   const location = useLocation();
   const navigate = useNavigate();
+const [params] = useSearchParams();
+
+  const purchaseOrderId = params.get("purchase_order_id");
+  const fee_id=purchaseOrderId.split("_")[1];
+  const transactionId =
+    params.get("transaction_id") ||
+    params.get("txnId") ||
+    params.get("tidx");
+
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -28,7 +37,7 @@ export default function PaymentSuccess() {
         }
 
         // Call backend to verify payment
-        const { data } = await apiprivate.post("/khalti/verify", { pidx });
+        const { data } = await apiprivate.post("/khalti/verify", { pidx, fee_id, transactionId });
 
         setFeeDetails(data.fee); // backend returns fee details
         setLoading(false);

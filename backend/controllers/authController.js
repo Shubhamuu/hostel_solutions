@@ -36,7 +36,13 @@ exports.register = async (req, res) => {
       hostelName,
       hostelLocation,
     } = req.body;
-
+ const verificationDocuments = req.files
+          ? req.files.map(file => ({
+            type: req.body.documentType || 'UNKNOWN',
+            url: file.path,
+            public_id: file.filename,
+          }))
+          : [];
     const normalizedRole = role?.toUpperCase();
 
     if (!['STUDENT', 'ADMIN'].includes(normalizedRole)) {
@@ -70,6 +76,7 @@ exports.register = async (req, res) => {
     // UPDATE EXISTING TEMP USER (RESEND OTP)
     // =====================================
     if (tempUser) {
+     
       tempUser.name = name;
       tempUser.passwordHash = hashedPassword;
       tempUser.verificationCode = verificationCode;
@@ -80,13 +87,7 @@ exports.register = async (req, res) => {
         tempUser.hostelName = hostelName;
         tempUser.hostelLocation = hostelLocation;
         // ✅ Prepare verification documents safely
-        const verificationDocuments = req.files
-          ? req.files.map(file => ({
-            type: req.body.documentType || 'UNKNOWN',
-            url: file.path,
-            public_id: file.filename,
-          }))
-          : [];
+        
         // ✅ Only overwrite docs if new ones uploaded
         if (verificationDocuments.length > 0) {
           tempUser.verificationDocuments = verificationDocuments;

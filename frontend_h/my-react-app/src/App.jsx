@@ -23,6 +23,8 @@ import ProtectedRoute from './components/common/ProtectedRoute.jsx';
 import MyBooking from './pages/student/bookingdetails.jsx';
 import MyRoom from './pages/student/rooms.jsx';
 import BookingDetails from './pages/admin/bookingDetails.jsx';
+import HostelDetails from './components/common/hostels.jsx';
+import Search from './pages/search.jsx';
 function App() {
 
 
@@ -35,6 +37,8 @@ function App() {
       <Route path='/rooms/:hostelId' element={<Rooms />} />
       <Route path='/login' element={<Login />} />
       <Route path='/forgot-Password' element={<ForgotPassword />} />
+      <Route path='/hostels' element={<HostelDetails />} />
+      <Route path='/search' element={<Search />} />
       <Route element={<ProtectedRoute allowedRoles={['SUPERADMIN']} />}>
         <Route path='/superadmin' element={<Outlet />} >
           <Route path='dashboard' element={<SuperAdminDashboard />} />

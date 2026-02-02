@@ -57,10 +57,13 @@ exports.createRoom = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-exports.getRoom = async (req, res) => {
-  const roomId = req.params
+exports.getRoomDetails = async (req, res) => {
+  const roomId = req.params.roomId
   try {
     const room = await Room.findById(roomId);
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
     res.json(room);
   } catch (err) {
     console.error(err);
@@ -577,6 +580,13 @@ exports.updateroomDetails = async (req, res) => {
 }
 exports.leaveRoom = async (req, res) => {
   try {
+    const token = getUserFromToken(
+      req.headers.authorization?.split(" ")[1]
+    );
+    const user = await User.findOne({ email: token.email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
     const { roomId } = req.params;
     const room = await Room.findById(roomId);
     if (!room) {
@@ -584,7 +594,7 @@ exports.leaveRoom = async (req, res) => {
     }
     room.currentOccupancy -= 1;
     await room.save();
-    await User.findByIdAndUpdate(req.user._id, { roomId: null, roomNumber: null, moveInDate: null, bookingEndDate: null, hostelId: null });
+    await User.findByIdAndUpdate(user._id, { roomId: null, roomNumber: null, moveInDate: null, bookingEndDate: null, hostelId: null });
     
     res.json({ message: "Room left successfully" });
   } catch (err) {

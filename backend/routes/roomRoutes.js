@@ -7,6 +7,7 @@ const { isAdmin, isUser } = require('../middleware/authmiddleware');
 // Upload multiple images to a room
 router.post('/create', isAdmin, upload.array('images', 5), roomController.createRoom);
 router.get('/getallrooms',isAdmin, roomController.getAllRooms);
+router.get('/getroom/:roomId', roomController.getRoomDetails);
 //router.post('/:roomId/images', isAdmin, upload.array('images', 5), roomController.uploadRoomImages);
 router.post('/assignroom', isAdmin, roomController.assignRoom);
 router.post('/bookroom',isUser, roomController.bookRoom);
@@ -18,6 +19,6 @@ router.get('/mybookings', isUser, roomController.getBookingDetails);
 router.post('/cancelbooking',isUser,roomController.cancelBooking);
 // Dynamic route for available rooms
 router.get('/:hostelId', roomController.availableRooms);
-
+router.post('/leave/:roomId',isUser,roomController.leaveRoom);
 router.put('/updateroom/:roomId', isAdmin, upload.array('images', 5), roomController.updateroomDetails);
 module.exports = router;

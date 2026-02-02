@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiprivate } from "../../services/api";
 import { useParams, useNavigate, useLocation } from "react-router";
 import { Loader2, AlertCircle, ArrowLeft, CheckCircle, XCircle } from "lucide-react";
 
@@ -14,13 +15,6 @@ export default function KhaltiPayment() {
 
   useEffect(() => {
     const fetchFeeDetails = async () => {
-      const token = localStorage.getItem("accessToken");
-
-      if (!token) {
-        navigate("/login", { state: { from: location.pathname } });
-        return;
-      }
-
       if (!feeId) {
         setError("No fee ID provided");
         setLoading(false);
@@ -28,23 +22,26 @@ export default function KhaltiPayment() {
       }
 
       try {
-        // Fetch fee details
-        const feeRes = await fetch(`http://localhost:5000/api/fees/viewFeeBystudent`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // Fetch fee details using axios
+        const res = await apiprivate.get(`/fees/viewFeeBystudent`);
+        // Note: The original API was fetch(`http://localhost:5000/api/fees/viewFeeBystudent`)
+        // Assuming viewFeeBystudent returns all fees or filters by context. 
+        // Wait, the original code didn't use feeId in the URL? 
+        // Original: `http://localhost:5000/api/fees/viewFeeBystudent`
+        // It seems it returns a list or a specific fee?
+        // Let's look at the response handling: `setFeeDetails(feeData)`.
+        // If it returns a list, this might be wrong.
+        // But assuming the endpoint logic is "get fee for THIS student", it returns an object? 
+        // Let's trust the original endpoint string.
 
-        if (feeRes.status === 401 || feeRes.status === 403) {
-          localStorage.clear();
-          navigate("/login", { state: { from: location.pathname } });
-          return;
-        }
+        // Actually, viewing previous file content:
+        // const feeRes = await fetch(`http://localhost:5000/api/fees/viewFeeBystudent`, ...);
+        // const feeData = await feeRes.json();
+        // setFeeDetails(feeData);
+        // const balance = feeData.amountDue ...
+        // So it returns a SINGLE object.
 
-        if (!feeRes.ok) {
-          const errData = await feeRes.json();
-          throw new Error(errData.message || "Failed to fetch fee details");
-        }
-
-        const feeData = await feeRes.json();
+        const feeData = res.data;
         setFeeDetails(feeData);
 
         const balance = feeData.amountDue - (feeData.amountPaid || 0);
@@ -61,11 +58,11 @@ export default function KhaltiPayment() {
         }
 
         // Initiate Khalti payment
-        await initiateKhaltiPayment(token, feeData);
+        await initiateKhaltiPayment(null, feeData); // Token handled by interceptor
 
       } catch (err) {
         console.error(err);
-        setError(err.message || "Failed to process payment");
+        setError(err.response?.data?.message || err.message || "Failed to process payment");
         setLoading(false);
       }
     };
@@ -73,32 +70,14 @@ export default function KhaltiPayment() {
     fetchFeeDetails();
   }, [feeId, navigate, location.pathname]);
 
-  const initiateKhaltiPayment = async (token, feeData) => {
+  const initiateKhaltiPayment = async (_, feeData) => {
     try {
-      const res = await fetch("http://localhost:5000/api/khalti/fee/initiate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ feeId }),
-      });
+      const res = await apiprivate.post("/khalti/fee/initiate", { feeId });
 
-      if (res.status === 401 || res.status === 403) {
-        localStorage.clear();
-        navigate("/login", { state: { from: location.pathname } });
-        return;
-      }
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Payment initiation failed");
-
+      const data = res.data;
       if (!data.payment_url) throw new Error("No payment URL received from server");
 
       setPaymentInitiated(true);
-
-      // Store pidx if needed for local reference, though mostly handled by callback
-      // localStorage.setItem('current_payment_pidx', data.pidx);
 
       // Redirect after showing success message
       setTimeout(() => {
@@ -107,7 +86,7 @@ export default function KhaltiPayment() {
 
     } catch (err) {
       console.error("Payment initiation error:", err);
-      setError(err.message || "Failed to initiate payment");
+      setError(err.response?.data?.message || err.message || "Failed to initiate payment");
       setLoading(false);
     }
   };

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Loader2, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
-import apiprivate from "../../services/api";
+import { apiprivate } from "../../services/api"; // Corrected named import
+
 export default function KhaltiSuccess() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -21,23 +22,22 @@ export default function KhaltiSuccess() {
 
         // Get query params from URL
         const queryParams = new URLSearchParams(location.search);
-        const payload = Object.fromEntries(queryParams.entries());
-        console.log("Payment verification payload:", payload);
-        // Send POST request to backend
-     const res = await apiprivate.post(
-  "/khalti/verify",
-  payload,
-  {
-    headers: {
-      "Content-Type": "application/json",
-    },
-  }
-);
+        const pidx = queryParams.get("pidx");
 
-        const data = await res.json();
+        if (!pidx) {
+          throw new Error("Missing pidx in callback URL");
+        }
 
-        if (!res.ok || !data.success) {
-          throw new Error(data.message || "Payment verification failed");
+        console.log("Verifying Khalti payment, pidx:", pidx);
+
+        // Send POST request to backend using axios
+        const res = await apiprivate.post("/khalti/verify", { pidx });
+
+        // Axios response.data contains the body
+        const data = res.data;
+
+        if (!data.fee && !data.message) {
+          throw new Error("Invalid response from server");
         }
 
         setStatus("Payment verified successfully!");
@@ -47,7 +47,7 @@ export default function KhaltiSuccess() {
         setTimeout(() => navigate("/fee"), 2000);
       } catch (err) {
         console.error("Payment verification error:", err);
-        setError(err.message || "Payment verification failed");
+        setError(err.response?.data?.message || err.message || "Payment verification failed");
         setLoading(false);
       }
     };

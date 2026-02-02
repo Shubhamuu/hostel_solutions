@@ -7,7 +7,7 @@ const upload = require('../middleware/upload');
 // POST /api/auth/refresh-token
 //router.post("/refresh-token", authController.refreshToken);
 // Register new user
-router.post('/register', upload.array('verificationDocuments'), authController.register);
+router.post('/register', upload.array('verificationDocuments',5), authController.register);
 
 // Verify user token
 router.post('/verify-otp', authController.verifyOtp);

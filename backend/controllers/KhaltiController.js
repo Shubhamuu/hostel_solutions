@@ -63,17 +63,17 @@ exports.initiateKhaltiFeePayment = async (req, res) => {
     );
 
     console.log("✅ Khalti Payment Initiated:", response.data);
-// after successful initiate API call
-const khaltiResponse = response.data;
+    // after successful initiate API call
+    const khaltiResponse = response.data;
 
-await Fee.findByIdAndUpdate(
-  feeId,
-  {
-    khaltiPidx: khaltiResponse.pidx,
-    KhaltipaymentStatus: "INITIATED"
-  },
-  { new: true }
-);
+    await Fee.findByIdAndUpdate(
+      feeId,
+      {
+        khaltiPidx: khaltiResponse.pidx,
+        KhaltipaymentStatus: "INITIATED"
+      },
+      { new: true }
+    );
 
     return res.json({
       pidx: response.data.pidx,
@@ -94,7 +94,7 @@ exports.verifyKhaltiFeePayment = async (req, res) => {
   try {
     console.log("🔍 [Khalti Verify] Body:", req.body);
 
-    const { pidx } = req.body;
+    const { pidx, fee_id, transactionId } = req.body;
 
     if (!pidx) {
       return res.status(400).json({ message: "Missing pidx" });
@@ -111,9 +111,6 @@ exports.verifyKhaltiFeePayment = async (req, res) => {
         },
       }
     );
-
-    console.log("🔍 [Khalti Lookup]:", khaltiResponse.data);
-
     if (khaltiResponse.data.status !== "Completed") {
       return res.status(400).json({
         message: `Payment not completed`,
@@ -122,8 +119,8 @@ exports.verifyKhaltiFeePayment = async (req, res) => {
     }
 
     // 2️⃣ Find Fee using saved pidx
-    const fee = await Fee.findOne({ khaltiPidx: pidx });
-
+    const fee = await Fee.findById(fee_id);
+    console.log("🔍 [Fee Found]:", fee);
     if (!fee) {
       return res.status(404).json({
         message: "Fee record not found for this payment",
@@ -154,22 +151,22 @@ exports.verifyKhaltiFeePayment = async (req, res) => {
     await fee.save();
 
     // 5️⃣ Update booking status
-  
 
-  const booking = await Booking.findOne({
-  studentId: fee.studentId,
-  status: "PENDING"
-});
 
-if (booking) {
-  booking.status = "CONFIRMED";
-  await booking.save();
+    const booking = await Booking.findOne({
+      studentId: fee.studentId,
+      status: "PENDING"
+    });
 
-  await Room.findByIdAndUpdate(
-    booking.roomId,
-    { $inc: { booking: -1 } }
-  );
-}
+    if (booking) {
+      booking.status = "CONFIRMED";
+      await booking.save();
+
+      await Room.findByIdAndUpdate(
+        booking.roomId,
+        { $inc: { booking: -1, currentOccupancy: 1 } }
+      );
+    }
 
 
     // 6️⃣ Mark user as verified
