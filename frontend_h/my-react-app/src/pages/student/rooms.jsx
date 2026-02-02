@@ -27,6 +27,8 @@ export default function MyRoom() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
+const [leaving, setLeaving] = useState(false);
+const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   useEffect(() => {
     const fetchRoom = async () => {
@@ -42,6 +44,19 @@ export default function MyRoom() {
     };
     fetchRoom();
   }, []);
+const handleLeaveRoom = async () => {
+  try {
+    setLeaving(true);
+    await apiprivate.post(`/rooms/leave/${room._id}`);
+    window.location.reload(); // simplest + safest
+  } catch (err) {
+    console.error("Leave room failed:", err);
+    alert(err?.response?.data?.message || "Failed to leave room");
+  } finally {
+    setLeaving(false);
+    setShowLeaveConfirm(false);
+  }
+};
 
   const clearError = () => {
     setError("");
@@ -338,6 +353,13 @@ export default function MyRoom() {
           </div>
         </div>
       </div>
+<button
+  onClick={() => setShowLeaveConfirm(true)}
+  className="w-full p-3 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 rounded-lg transition-colors text-left flex items-center gap-3 border border-rose-700"
+>
+  <AlertTriangle size={18} />
+  <span>Leave Room</span>
+</button>
 
       {/* Image Modal */}
       {selectedImage && (
@@ -355,6 +377,38 @@ export default function MyRoom() {
           />
         </div>
       )}
+      {showLeaveConfirm && (
+  <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+    <div className="bg-gray-900 rounded-2xl border border-gray-700 max-w-md w-full p-6">
+      <h3 className="text-xl font-bold text-white mb-3">
+        Leave Room?
+      </h3>
+      <p className="text-gray-400 mb-6">
+        Are you sure you want to leave this room?  
+        This action cannot be undone.
+      </p>
+
+      <div className="flex gap-4">
+        <button
+          onClick={() => setShowLeaveConfirm(false)}
+          className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-xl"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleLeaveRoom}
+          disabled={leaving}
+          className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl flex items-center justify-center gap-2"
+        >
+          {leaving && <Loader2 size={18} className="animate-spin" />}
+          Leave Room
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
