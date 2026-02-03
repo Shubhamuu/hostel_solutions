@@ -114,7 +114,7 @@ const handleLeaveRoom = async () => {
                 Browse Available Rooms
               </Link>
               <Link
-                to="/my-booking"
+                to="/mybooking"
                 className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-gray-300 font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
               >
                 <CreditCard size={18} />
