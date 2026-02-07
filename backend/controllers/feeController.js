@@ -31,7 +31,7 @@ exports.viewFeeByStudent = async (req, res) => {
     
     const fees = await Fee.find({ studentId: userData._id })
 
-console.log("Fetched fees:", fees);
+//console.log("Fetched fees:", fees);
     return res.status(200).json(fees);
   } catch (err) {
     console.error(err);

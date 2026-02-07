@@ -11,7 +11,10 @@ token = req.headers.authorization?.split(' ')[1];
 
  try {
   const user = getUserFromToken(token);
-  const userData= await User.findById(user.id || user.userId).select('-passwordHash');
+  const userData = await User.findOne({ email: user.email }).select(
+  "hostelname hostelId _id name email role approvalStatus"
+);
+
     res.json({
     message: 'User details fetched successfully',
     user: userData,
@@ -125,7 +128,7 @@ exports.getAllUsers = async (req, res) => {
     const admin = getUserFromToken(token);
     const admins = await User.findOne({email:admin.email});
     const hostelId = admins.managedHostelId;
- const users = await User.findOne({ hostelId: hostelId }, '-passwordHash -createdAt -updatedAt -emailVerificationCode'); // exclude password field
+ const users = await User.find({ hostelId: hostelId }, '-passwordHash -createdAt -updatedAt -emailVerificationCode'); // exclude password field
  console.log(users, hostelId);   
  res.status(200).json(users);
   } catch (err) {
@@ -372,6 +375,7 @@ exports.reapplyverifyAdmin = async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
     const userData = getUserFromToken(token);
+    const {hostelName, hostelAddress} = req.body;
      const verificationDocuments = req.files
       ? req.files.map(file => ({
           type: req.body.documentType || 'UNKNOWN',
@@ -392,12 +396,46 @@ exports.reapplyverifyAdmin = async (req, res) => {
       return res.status(400).json({ message: 'Admin already approved' });
     }
     admin.approvalStatus = 'PENDING';
+    if(admin.managedHostelId){
+  const hostel = await Hostel.findById(admin.managedHostelId);
+  if(hostel){
+    hostel.name = hostelName || hostel.name;
+    hostel.address = hostelAddress || hostel.address;
+    hostel.isActive = false;  
+    await hostel.save();
+  }
+    }
+else {
+   if(!hostelName || !hostelAddress){
+      return res.status(400).json({ message: 'Hostel name and address are required' });
+    };
+    
+  const newHostel = new Hostel({
+   
+    name: hostelName,
+    address: hostelAddress,
+    adminId: admin._id,
+    isActive: false,
+  });
+  const savedHostel = await newHostel.save();
+  admin.managedHostelId = savedHostel._id;
+  admin.hostelname = hostelName;
+}
     admin.verificationDocuments = verificationDocuments;
     await admin.save();
-
+  
     res.status(200).json({
       success: true,
-      message: 'Re-applied for admin verification successfully'
+      message: 'Re-applied for admin verification successfully',
+      updatedUser: admin.id ? {
+        _id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+        approvalStatus: admin.approvalStatus,
+        managedHostelId: admin.managedHostelId,
+        hostelname: admin.hostelname,
+      } : null
     });
   } catch (err) {
     res.status(500).json({

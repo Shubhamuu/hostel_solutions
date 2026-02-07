@@ -10,6 +10,7 @@ export default function HostelBookings() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState("newest");
   const [expandedBooking, setExpandedBooking] = useState(null);
+const [confirmingId, setConfirmingId] = useState(null);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -57,6 +58,34 @@ export default function HostelBookings() {
 
     return filtered;
   }, [bookings, searchTerm, statusFilter, sortBy]);
+const handleConfirmBooking = async (booking) => {
+  try {
+    setConfirmingId(booking._id);
+
+    await apiprivate.post("/rooms/confirmbookingadmin", {
+      roomId: booking.roomId?._id,
+      userId: booking.studentId?._id,
+      bookingId: booking._id,
+      feeAmount: booking.roomId?.price,
+    });
+
+    // Optimistically update UI
+    setBookings((prev) =>
+      prev.map((b) =>
+        b._id === booking._id
+          ? { ...b, status: "CONFIRMED" }
+          : b
+      )
+    );
+  } catch (err) {
+    alert(
+      err.response?.data?.message ||
+      "Failed to confirm booking"
+    );
+  } finally {
+    setConfirmingId(null);
+  }
+};
 
   const statusStats = useMemo(() => {
     const stats = {
@@ -355,6 +384,34 @@ export default function HostelBookings() {
                           <span className="text-gray-300">
                             Student ID: {booking.studentId?._id?.substring(0, 8) || "N/A"}
                           </span>
+                          {booking.status === "PENDING" && (
+  <div className="mt-4 flex justify-end">
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleConfirmBooking(booking);
+      }}
+      disabled={confirmingId === booking._id}
+      className="flex items-center gap-2 px-4 py-2 rounded-lg
+        bg-green-600 hover:bg-green-700
+        disabled:bg-gray-600 disabled:cursor-not-allowed
+        transition-all text-white font-medium"
+    >
+      {confirmingId === booking._id ? (
+        <>
+          <Loader2 className="animate-spin" size={18} />
+          Confirming...
+        </>
+      ) : (
+        <>
+          <CheckCircle size={18} />
+          Confirm Booking
+        </>
+      )}
+    </button>
+  </div>
+)}
+
                         </div>
                       </div>
                     </div>

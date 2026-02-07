@@ -1,6 +1,7 @@
 import {
   Menu, X, Home, Phone, Building,
-  LogIn, UserPlus, LogOut, User, Search
+  LogIn, UserPlus, LogOut, User, Search,
+  Sun, Moon
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
@@ -8,12 +9,32 @@ import { Link, useLocation, useNavigate } from "react-router";
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [theme, setTheme] = useState("dark");
+
   const location = useLocation();
   const navigate = useNavigate();
 
+  /* ---------------- THEME ---------------- */
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const activeTheme = savedTheme || (prefersDark ? "dark" : "light");
+
+    setTheme(activeTheme);
+    document.documentElement.classList.toggle("dark", activeTheme === "dark");
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem("theme", next);
+    document.documentElement.classList.toggle("dark", next === "dark");
+  };
+
+  /* ---------------- USER ---------------- */
   useEffect(() => {
     const userData = localStorage.getItem("user");
     if (userData) setUser(JSON.parse(userData));
@@ -32,11 +53,10 @@ const NavBar = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery("");
-      setMobileMenuOpen(false);
-    }
+    if (!searchQuery.trim()) return;
+    navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    setSearchQuery("");
+    setMobileMenuOpen(false);
   };
 
   const navItems = [
@@ -45,64 +65,59 @@ const NavBar = () => {
     { text: "Contact", to: "/contact", icon: Phone },
   ];
 
-  const isActive = (path) => {
-    return location.pathname === path;
-  };
+  const isActive = (path) => location.pathname === path;
 
   return (
     <nav
-      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        scrolled
-          ? "bg-[#0B0D10]/95 backdrop-blur-xl border-b border-gray-800 shadow-2xl"
+      className={`fixed top-0 w-full z-50 transition-all duration-300
+        ${scrolled
+          ? "bg-white/95 dark:bg-[#0B0D10]/95 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800 shadow-lg"
           : "bg-transparent"
-      }`}
+        }`}
     >
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        
+
         {/* LOGO */}
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center font-extrabold text-black group-hover:scale-105 transition-transform duration-300 shadow-lg">
+        <Link to="/" className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center font-extrabold text-black shadow-lg">
             H
           </div>
-          <div>
-            <p className="text-lg font-bold text-white leading-tight">
-              HostelHub
-            </p>
-            {!scrolled && (
-              <span className="text-xs text-gray-400">
-                Your perfect stay awaits
-              </span>
-            )}
-          </div>
+          <p className="text-lg font-bold text-gray-900 dark:text-white">
+            Hostel Management
+          </p>
         </Link>
 
-        {/* SEARCH BAR (Desktop) */}
+        {/* SEARCH DESKTOP */}
         <div className="hidden md:flex flex-1 max-w-md mx-6">
           <form onSubmit={handleSearch} className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
-              type="text"
-              placeholder="Search hostels, locations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white/5 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              placeholder="Search hostels, locations..."
+              className="w-full pl-10 pr-4 py-2 rounded-lg
+                bg-gray-100 dark:bg-white/5
+                text-gray-900 dark:text-white
+                border border-gray-300 dark:border-gray-700
+                focus:ring-2 focus:ring-amber-500 outline-none"
             />
           </form>
         </div>
 
         {/* DESKTOP MENU */}
         <div className="hidden md:flex items-center gap-2">
+
           {navItems.map((item) => {
             const active = isActive(item.to);
             return (
               <Link
                 key={item.to}
                 to={item.to}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  active
-                    ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg"
-                    : "text-gray-300 hover:text-white hover:bg-white/10"
-                }`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                  ${active
+                    ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-md"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10"
+                  }`}
               >
                 <item.icon className="w-4 h-4" />
                 {item.text}
@@ -110,162 +125,77 @@ const NavBar = () => {
             );
           })}
 
-          {/* Auth Section */}
-          <div className="relative ml-4">
-            {user ? (
-              <>
-                <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg"
-                >
-                  <User className="w-4 h-4" />
-                  <span>{user.name?.split(' ')[0] || 'Account'}</span>
-                </button>
+          {/* THEME TOGGLE */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20"
+          >
+            {theme === "dark"
+              ? <Sun className="w-5 h-5 text-yellow-400" />
+              : <Moon className="w-5 h-5 text-gray-800" />}
+          </button>
 
-                {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-[#0B0D10] border border-gray-800 rounded-xl shadow-2xl overflow-hidden">
-                    <div className="p-4 border-b border-gray-800">
-                      <p className="font-semibold text-white">{user.name}</p>
-                      <p className="text-xs text-gray-400 mt-1">{user.role}</p>
-                    </div>
-                    <div className="p-2">
-                      <Link
-                        to={`/${user.role?.toLowerCase()}/dashboard`}
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                      >
-                        <Home className="w-4 h-4" />
-                        Dashboard
-                      </Link>
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors mt-1"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        Logout
-                      </button>
-                    </div>
+          {/* USER MENU */}
+          {user ? (
+            <div className="relative ml-2">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg
+                  bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
+              >
+                <User className="w-4 h-4" />
+                {user.name?.split(" ")[0]}
+              </button>
+
+              {userMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 rounded-xl overflow-hidden
+                  bg-white dark:bg-[#0B0D10] border border-gray-200 dark:border-gray-800 shadow-2xl">
+                  
+                  <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+                    <p className="font-semibold text-gray-900 dark:text-white">{user.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{user.role}</p>
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Link
-                  to="/login"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
-                >
-                  <LogIn className="w-4 h-4" />
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-black hover:from-amber-600 hover:to-orange-600 transition-all duration-200 shadow-lg"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Register
-                </Link>
-              </div>
-            )}
-          </div>
+
+                  <Link
+                    to={`/${user.role?.toLowerCase()}/dashboard`}
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-3 text-sm
+                      text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
+                  >
+                    <Home className="w-4 h-4" />
+                    Dashboard
+                  </Link>
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm
+                      text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <Link to="/login" className="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg">
+                Login
+              </Link>
+              <Link to="/register" className="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-black font-semibold shadow-lg">
+                Register
+              </Link>
+            </>
+          )}
         </div>
 
         {/* MOBILE BUTTON */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
-          aria-label="Toggle menu"
+          className="md:hidden p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10"
         >
           {mobileMenuOpen ? <X /> : <Menu />}
         </button>
-      </div>
-
-      {/* MOBILE MENU */}
-      <div
-        className={`md:hidden transition-all duration-300 overflow-hidden ${
-          mobileMenuOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
-        } bg-[#0B0D10] border-t border-gray-800`}
-      >
-        <div className="p-4">
-          {/* Mobile Search */}
-          <form onSubmit={handleSearch} className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search hostels..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white/5 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-              />
-            </div>
-          </form>
-
-          {/* Navigation Items */}
-          <div className="space-y-1 mb-4">
-            {navItems.map((item) => {
-              const active = isActive(item.to);
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium ${
-                    active
-                      ? "bg-gradient-to-r from-amber-500 to-orange-500 text-black"
-                      : "text-gray-300 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  <item.icon className="w-5 h-5" />
-                  {item.text}
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Auth Section */}
-          {user ? (
-            <div className="space-y-1 border-t border-gray-800 pt-4">
-              <div className="px-4 py-3">
-                <p className="font-semibold text-white">{user.name}</p>
-                <p className="text-xs text-gray-400 mt-1">{user.role}</p>
-              </div>
-              <Link
-                to={`/${user.role?.toLowerCase()}/dashboard`}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white"
-              >
-                <Home className="w-5 h-5" />
-                Dashboard
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-red-400 hover:bg-red-900/20 hover:text-red-300"
-              >
-                <LogOut className="w-5 h-5" />
-                Logout
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-2 border-t border-gray-800 pt-4">
-              <Link
-                to="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-gray-300 hover:bg-white/10 hover:text-white"
-              >
-                <LogIn className="w-5 h-5" />
-                Login
-              </Link>
-              <Link
-                to="/register"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-black hover:from-amber-600 hover:to-orange-600"
-              >
-                <UserPlus className="w-5 h-5" />
-                Register
-              </Link>
-            </div>
-          )}
-        </div>
       </div>
     </nav>
   );

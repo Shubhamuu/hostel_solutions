@@ -128,17 +128,21 @@ export default function Register() {
   /* ---------------- VALIDATION ---------------- */
   const validateForm = () => {
     const e = {};
-
+    const nameregex = /^[a-zA-Z\s]+$/;
     if (!formData.name.trim()) e.name = 'Name is required';
     else if (formData.name.trim().length < 3) e.name = 'Name must be at least 3 characters';
+    else if (!nameregex.test(formData.name.trim())) e.name = 'Name must contain only letters and spaces';
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email.trim()) e.email = 'Email is required';
     else if (!emailRegex.test(formData.email)) e.email = 'Invalid email address';
-
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/;
     if (!formData.password) e.password = 'Password is required';
     else if (formData.password.length < 6) e.password = 'Minimum 6 characters';
     else if (passwordStrength < 50) e.password = 'Password too weak';
+    else if (!passwordRegex.test(formData.password)) {
+      e.password = 'Password must contain at least one uppercase, lowercase letter, one number and special character';
+    }
 
     if (role === 'ADMIN') {
       if (!adminData.hostelName.trim()) e.hostelName = 'Hostel name is required';
@@ -185,11 +189,11 @@ export default function Register() {
 
   const handleVerifyOtp = async () => {
     const code = otp.join('').trim();
-    if (code.length !== 6) {
-      setMessage({ type: 'error', text: 'Please enter 6-digit code' });
-      return;
-    }
-
+    console.log("Verifying OTP code:", code);
+    if (!/^[0-9a-fA-F]{6}$/.test(code)) {
+  setMessage({ type: 'error', text: 'OTP must be 6 hexadecimal characters (0-9, A-F)' });
+  return;
+}
     setLoading(true);
     try {
       const res = await apiprivate.post('/auth/verify-otp', {
@@ -224,7 +228,7 @@ export default function Register() {
 
     if (value && index < 5) otpRefs.current[index + 1]?.focus();
 
-    if (index === 5 && value && newOtp.every(d => d !== '')) {
+    if (index === 6 && value && newOtp.every(d => d !== '')) {
       handleVerifyOtp();
     }
   };
@@ -313,393 +317,358 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
-      {/* Theme Toggle Button */}
-      <button
-        onClick={() => setDarkMode(!darkMode)}
-        className="absolute top-4 right-4 p-2 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
-        aria-label="Toggle theme"
-      >
-        {darkMode ? '🌞' : '🌙'}
-      </button>
+  <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4 transition-colors">
+  {/* Theme Toggle Button */}
+  <button
+    onClick={() => setDarkMode(!darkMode)}
+    className="absolute top-4 right-4 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white"
+    aria-label="Toggle theme"
+  >
+    {darkMode ? '🌞' : '🌙'}
+  </button>
 
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 dark:bg-indigo-500 rounded-2xl mb-4 shadow-lg">
-            <Shield className="h-8 w-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {step === 'register' ? 'Create Account' : 'Verify Identity'}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            {step === 'register' ? 'Join our platform today' : 'Enter the verification code sent to your email'}
-          </p>
-        </div>
+  <div className="w-full max-w-md">
+    <div className="text-center mb-8">
+      <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl mb-4 shadow-lg">
+        <Shield className="h-8 w-8 text-black" />
+      </div>
+      <h1 className="text-3xl font-bold text-white mb-2">
+        {step === 'register' ? 'Create Account' : 'Verify Identity'}
+      </h1>
+      <p className="text-gray-400">
+        {step === 'register' ? 'Join our platform today' : 'Enter the verification code sent to your email'}
+      </p>
+    </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 transition-colors">
-          {message.text && (
-            <div
-              className={`mb-6 p-4 rounded-xl flex items-start gap-3 ${
-                message.type === 'success'
-                  ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300'
-                  : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300'
-              }`}
-            >
-              {message.type === 'success' ? (
-                <CheckCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-              ) : (
-                <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-              )}
-              <p className="text-sm font-medium">{message.text}</p>
-            </div>
-          )}
-
-          {step === 'register' ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleRegister();
-              }}
-              className="space-y-6"
-            >
-              {/* Role Selector */}
-              <div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  {['STUDENT', 'ADMIN'].map(r => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => {
-                        setRole(r);
-                        setErrors({});
-                      }}
-                      className={`py-3 rounded-lg text-sm font-medium transition-all ${
-                        role === r
-                          ? 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-md'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Form Fields - Using RegularInputField */}
-              <RegularInputField
-                icon={User}
-                id="name"
-                type="text"
-                placeholder="Full Name"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                error={errors.name}
-              />
-
-              <RegularInputField
-                icon={Mail}
-                id="email"
-                type="email"
-                placeholder="Email Address"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                error={errors.email}
-              />
-
-              <div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400 dark:text-gray-500" />
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Password"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                    className="w-full pl-11 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent transition-all"
-                  />
-                  <button
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3.5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                    type="button"
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-
-                {/* Password Strength Indicator */}
-                {formData.password && (
-                  <div className="mt-2">
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Password strength: <span className={getPasswordStrengthText().color}>{getPasswordStrengthText().text}</span>
-                      </span>
-                    </div>
-                    <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all duration-300 ${
-                          passwordStrength >= 75
-                            ? 'bg-green-500'
-                            : passwordStrength >= 50
-                            ? 'bg-blue-500'
-                            : passwordStrength >= 25
-                            ? 'bg-yellow-500'
-                            : 'bg-red-500'
-                        }`}
-                        style={{ width: `${passwordStrength}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {errors.password && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-                    <AlertCircle className="h-4 w-4" />
-                    {errors.password}
-                  </p>
-                )}
-              </div>
-
-              {/* Admin Specific Fields */}
-              {role === 'ADMIN' && (
-                <>
-                  <RegularInputField
-                    icon={Building2}
-                    id="hostelName"
-                    type="text"
-                    placeholder="Hostel Name"
-                    value={adminData.hostelName}
-                    onChange={(e) => handleAdminInputChange('hostelName', e.target.value)}
-                    error={errors.hostelName}
-                  />
-
-                  <RegularInputField
-                    icon={MapPin}
-                    id="hostelLocation"
-                    type="text"
-                    placeholder="Hostel Location"
-                    value={adminData.hostelLocation}
-                    onChange={(e) => handleAdminInputChange('hostelLocation', e.target.value)}
-                    error={errors.hostelLocation}
-                  />
-
-                  <div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current.click()}
-                      className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors bg-gray-50 dark:bg-gray-700/50"
-                    >
-                      <Upload className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                        Click to upload verification documents
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                        Max 10 files (PDF, DOC, JPG, PNG)
-                      </p>
-                    </button>
-
-                    {/* Uploaded Files List */}
-                    {adminData.documents.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        {adminData.documents.map((file, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                          >
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <FileText className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                              <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                                {file.name}
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => removeFile(index)}
-                              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-                              type="button"
-                            >
-                              <X className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {errors.documents && (
-                      <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-                        <AlertCircle className="h-4 w-4" />
-                        {errors.documents}
-                      </p>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {/* Register Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-indigo-600 dark:bg-indigo-500 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Creating Account...
-                  </>
-                ) : (
-                  'Get Started'
-                )}
-              </button>
-
-              {/* Login Link */}
-              <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-                Already have an account?{' '}
-                <Link to="/login" className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
-                  Sign in
-                </Link>
-              </div>
-            </form>
+    <div className="bg-gray-800 rounded-2xl shadow-xl p-8 transition-colors border border-gray-700">
+      {message.text && (
+        <div
+          className={`mb-6 p-4 rounded-xl flex items-start gap-3 ${
+            message.type === 'success'
+              ? 'bg-green-900/20 text-green-300 border border-green-800'
+              : 'bg-red-900/20 text-red-300 border border-red-800'
+          }`}
+        >
+          {message.type === 'success' ? (
+            <CheckCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
           ) : (
-            /* OTP Verification Step */
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full mb-4">
-                  <Mail className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Check your email
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  We sent a 6-digit code to{' '}
-                  <span className="font-medium text-gray-900 dark:text-white">{formData.email}</span>
-                </p>
-              </div>
+            <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+          )}
+          <p className="text-sm font-medium">{message.text}</p>
+        </div>
+      )}
 
-              {/* OTP Input Container with Paste Support */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-center">
-                  Enter verification code
-                </label>
-                <div
-                  ref={otpContainerRef}
-                  onPaste={handleOtpPaste}
-                  className="flex gap-2 justify-center"
-                >
-                  {otp.map((digit, i) => (
-                    <OtpInputField
-                      key={i}
-                      index={i}
-                      value={digit}
-                      onChange={handleOtpChange}
-                      onKeyDown={handleOtpKeyDown}
-                      innerRef={(el) => (otpRefs.current[i] = el)}
-                    />
-                  ))}
-                </div>
-
-                {/* Paste Button */}
-                <div className="mt-4 flex items-center justify-center gap-2">
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.readText().then(text => {
-                        const digits = text.replace(/\D/g, '').slice(0, 6);
-                        if (digits.length === 6) {
-                          const newOtp = digits.split('');
-                          setOtp(newOtp);
-                          setTimeout(() => otpRefs.current[5]?.focus(), 10);
-                        }
-                      });
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors text-gray-700 dark:text-gray-300"
-                    type="button"
-                  >
-                    <Clipboard className="h-4 w-4" />
-                    Paste OTP
-                  </button>
-
-                  {otp.every(d => d !== '') && (
-                    <button
-                      onClick={handleCopyOTP}
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors text-gray-700 dark:text-gray-300"
-                      type="button"
-                    >
-                      {copied ? (
-                        <>
-                          <ClipboardCheck className="h-4 w-4" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Clipboard className="h-4 w-4" />
-                          Copy OTP
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-
-                <p className="mt-3 text-xs text-center text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1">
-                  <Info className="h-3 w-3" />
-                  Pro tip: You can paste the entire 6-digit code directly
-                </p>
-              </div>
-
-              {/* Timer and Resend */}
-              <div className="space-y-3">
+      {step === 'register' ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleRegister();
+          }}
+          className="space-y-6"
+        >
+          {/* Role Selector */}
+          <div>
+            <div className="grid grid-cols-2 gap-3">
+              {['STUDENT', 'ADMIN'].map((r) => (
                 <button
-                  onClick={handleVerifyOtp}
-                  disabled={loading || otp.some(d => d === '')}
-                  className="w-full bg-green-600 dark:bg-green-500 text-white py-3 rounded-xl font-semibold hover:bg-green-700 dark:hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  key={r}
+                  type="button"
+                  onClick={() => {
+                    setRole(r);
+                    setErrors({});
+                  }}
+                  className={`py-3 rounded-lg text-sm font-medium transition-all ${
+                    role === r
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-lg'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
                 >
-                  {loading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Verifying...
-                    </span>
-                  ) : (
-                    'Verify Code'
-                  )}
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Form Fields */}
+          <RegularInputField
+            icon={User}
+            id="name"
+            type="text"
+            placeholder="Full Name"
+            value={formData.name}
+            onChange={(e) => handleInputChange('name', e.target.value)}
+            error={errors.name}
+          />
+
+          <RegularInputField
+            icon={Mail}
+            id="email"
+            type="email"
+            placeholder="Email Address"
+            value={formData.email}
+            onChange={(e) => handleInputChange('email', e.target.value)}
+            error={errors.email}
+          />
+
+          {/* Password */}
+          <div>
+            <div className="relative">
+              <Lock className="absolute left-3 top-3.5 h-5 w-5 text-gray-500" />
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                className="w-full pl-11 pr-12 py-3 border border-gray-600 rounded-xl bg-gray-700 text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+              />
+              <button
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3.5 text-gray-500 hover:text-gray-300"
+                type="button"
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+
+            {/* Password Strength */}
+            {formData.password && (
+              <div className="mt-2">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-gray-400">
+                    Password strength:{' '}
+                    <span className={getPasswordStrengthText().color}>{getPasswordStrengthText().text}</span>
+                  </span>
+                </div>
+                <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      passwordStrength >= 75
+                        ? 'bg-green-500'
+                        : passwordStrength >= 50
+                        ? 'bg-blue-500'
+                        : passwordStrength >= 25
+                        ? 'bg-amber-500'
+                        : 'bg-red-500'
+                    }`}
+                    style={{ width: `${passwordStrength}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {errors.password && (
+              <p className="mt-1 text-sm text-red-400 flex items-center gap-1">
+                <AlertCircle className="h-4 w-4" />
+                {errors.password}
+              </p>
+            )}
+          </div>
+
+          {/* Admin Fields */}
+          {role === 'ADMIN' && (
+            <>
+              <RegularInputField
+                icon={Building2}
+                id="hostelName"
+                type="text"
+                placeholder="Hostel Name"
+                value={adminData.hostelName}
+                onChange={(e) => handleAdminInputChange('hostelName', e.target.value)}
+                error={errors.hostelName}
+              />
+              <RegularInputField
+                icon={MapPin}
+                id="hostelLocation"
+                type="text"
+                placeholder="Hostel Location"
+                value={adminData.hostelLocation}
+                onChange={(e) => handleAdminInputChange('hostelLocation', e.target.value)}
+                error={errors.hostelLocation}
+              />
+
+              {/* File Upload */}
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current.click()}
+                  className="w-full border-2 border-dashed border-gray-600 rounded-xl p-6 hover:border-amber-500 transition-colors bg-gray-700/50"
+                >
+                  <Upload className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+                  <p className="text-sm text-gray-300 font-medium">
+                    Click to upload verification documents
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Max 10 files (PDF, DOC, JPG, PNG)
+                  </p>
                 </button>
 
-                <div className="text-center text-sm">
-                  {resendTimer > 0 ? (
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Resend code in <span className="font-medium text-gray-900 dark:text-white">{resendTimer}s</span>
-                    </p>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setResendTimer(60);
-                        setMessage({ type: 'success', text: 'New code sent!' });
-                      }}
-                      disabled={resendLoading}
-                      className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium disabled:opacity-50"
-                    >
-                      {resendLoading ? 'Sending...' : 'Resend code'}
-                    </button>
-                  )}
-                </div>
+                {adminData.documents.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {adminData.documents.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-gray-700 rounded-lg border border-gray-600"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <FileText className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                          <span className="text-sm text-gray-300 truncate">{file.name}</span>
+                        </div>
+                        <button
+                          onClick={() => removeFile(index)}
+                          className="p-1 hover:bg-gray-600 rounded text-gray-400 hover:text-red-400"
+                          type="button"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+            </>
+          )}
 
-              {/* Back to Register */}
+          {/* Register Button - Primary Action */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Creating Account...
+              </>
+            ) : (
+              'Get Started'
+            )}
+          </button>
+
+          {/* Login Link */}
+          <div className="text-center text-sm text-gray-400">
+            Already have an account?{' '}
+            <Link to="/login" className="text-gray-300 hover:text-white hover:bg-white/10 px-2 py-1 rounded transition-colors">
+              Sign in
+            </Link>
+          </div>
+        </form>
+      ) : (
+        /* OTP Step */
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-900/30 rounded-full mb-4">
+              <Mail className="h-8 w-8 text-amber-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">Check your email</h3>
+            <p className="text-sm text-gray-400">
+              We sent a 6-digit code to{' '}
+              <span className="font-medium text-white">{formData.email}</span>
+            </p>
+          </div>
+
+          {/* OTP Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-3 text-center">
+              Enter verification code
+            </label>
+            <div ref={otpContainerRef} onPaste={handleOtpPaste} className="flex gap-2 justify-center">
+              {otp.map((digit, i) => (
+                <OtpInputField
+                  key={i}
+                  index={i}
+                  value={digit}
+                  onChange={handleOtpChange}
+                  onKeyDown={handleOtpKeyDown}
+                  innerRef={(el) => (otpRefs.current[i] = el)}
+                />
+              ))}
+            </div>
+
+            {/* Paste Button */}
+            <div className="mt-4 flex items-center justify-center gap-2">
               <button
-                onClick={() => setStep('register')}
-                className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors"
+                onClick={() => {
+                  navigator.clipboard.readText().then((text) => {
+                    const digits = text.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
+                    if (digits.length === 6) {
+                      setOtp(digits.split(''));
+                      setTimeout(() => otpRefs.current[5]?.focus(), 10);
+                    }
+                  });
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-gray-300"
+                type="button"
               >
-                <ArrowLeft className="h-4 w-4" />
-                Back to registration
+                <Clipboard className="h-4 w-4" />
+                Paste OTP
               </button>
             </div>
-          )}
+
+            <p className="mt-3 text-xs text-center text-gray-500 flex items-center justify-center gap-1">
+              <Info className="h-3 w-3" /> tip: You can paste the entire code directly
+            </p>
+          </div>
+
+          {/* Timer & Resend */}
+          <div className="space-y-3">
+            {/* Verify Button - Primary Action */}
+            <button
+              onClick={handleVerifyOtp}
+              disabled={loading || otp.some((d) => d === '')}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Verifying...
+                </span>
+              ) : (
+                'Verify Code'
+              )}
+            </button>
+
+            <div className="text-center text-sm">
+              {resendTimer > 0 ? (
+                <p className="text-gray-400">
+                  Resend code in <span className="font-medium text-white">{resendTimer}s</span>
+                </p>
+              ) : (
+                <button
+                  onClick={() => {
+                    setResendTimer(60);
+                    setMessage({ type: 'success', text: 'New code sent!' });
+                  }}
+                  disabled={resendLoading}
+                  className="text-gray-300 hover:text-white hover:bg-white/10 px-3 py-1 rounded transition-colors disabled:opacity-50"
+                >
+                  {resendLoading ? 'Sending...' : 'Resend code'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Back to Register */}
+          <button
+            onClick={() => setStep('register')}
+            className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to registration
+          </button>
         </div>
-      </div>
+      )}
     </div>
+  </div>
+</div>
+
   );
 }

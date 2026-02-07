@@ -9,21 +9,24 @@ const generateCode = require('../utils/generatecode');
 const { generateTokens, verifyRefreshToken, removeRefreshToken, generateaccessToken } = require('../utils/jwtauth');
 
 exports.refreshToken = async (req, res) => {
-  const refreshToken = req.cookies?.refreshToken || req.headers.authorization?.split(' ')[1];
-
-
+  //console.log(req.headers)
+  const refreshToken = req?.headers?.cookie?.split('=')[1] || req.headers?.authorization?.split(' ')[1];
+ //console.log("Refresh token from cookie/header:", refreshToken);
+ //console.log("Headers:", req.headers);
   if (!refreshToken) {
     return res.status(401).json({ message: "Refresh token required" });
   }
-  console.log("Received refresh token:", refreshToken);
+  //console.log("Received refresh token:", refreshToken);
 
   const userData = await verifyRefreshToken(refreshToken);
+  console.log("User data from refresh token:", userData);
   if (!userData) {
+    
     return res.status(403).json({ message: "Invalid or expired refresh token" });
   }
-  console.log("User data from refresh token:", userData);
+  
   const tokens = generateaccessToken(userData); // new access token
-  res.json(tokens);
+  res.status(200).json(tokens);
 };
 
 exports.register = async (req, res) => {
@@ -36,13 +39,13 @@ exports.register = async (req, res) => {
       hostelName,
       hostelLocation,
     } = req.body;
- const verificationDocuments = req.files
-          ? req.files.map(file => ({
-            type: req.body.documentType || 'UNKNOWN',
-            url: file.path,
-            public_id: file.filename,
-          }))
-          : [];
+    const verificationDocuments = req.files
+      ? req.files.map(file => ({
+        type: req.body.documentType || 'UNKNOWN',
+        url: file.path,
+        public_id: file.filename,
+      }))
+      : [];
     const normalizedRole = role?.toUpperCase();
 
     if (!['STUDENT', 'ADMIN'].includes(normalizedRole)) {
@@ -76,7 +79,7 @@ exports.register = async (req, res) => {
     // UPDATE EXISTING TEMP USER (RESEND OTP)
     // =====================================
     if (tempUser) {
-     
+
       tempUser.name = name;
       tempUser.passwordHash = hashedPassword;
       tempUser.verificationCode = verificationCode;
@@ -87,7 +90,7 @@ exports.register = async (req, res) => {
         tempUser.hostelName = hostelName;
         tempUser.hostelLocation = hostelLocation;
         // ✅ Prepare verification documents safely
-        
+
         // ✅ Only overwrite docs if new ones uploaded
         if (verificationDocuments.length > 0) {
           tempUser.verificationDocuments = verificationDocuments;
@@ -185,6 +188,7 @@ exports.verifyOtp = async (req, res) => {
           name: tempUser.hostelName,
           address: tempUser.hostelLocation,
           adminId: user._id,
+          isActive: false,
         });
 
         await hostel.save();
@@ -194,6 +198,7 @@ exports.verifyOtp = async (req, res) => {
 
       // Link hostel to admin
       user.managedHostelId = hostel._id;
+      user.hostelname = hostel.name;
       await user.save();
     }
 
@@ -240,10 +245,11 @@ exports.login = async (req, res) => {
     res.cookie("refreshToken", tokens.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      sameSite: "lax",             // REQUIRED for cross-origin
+      maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     });
+
     if (user.role === 'ADMIN') {
       res.json({ tokens, user: { id: user._id, name: user.name, role: user.role, managedHostelId: user.managedHostelId, approvalStatus: user.approvalStatus } });
     } else {
@@ -308,7 +314,7 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ message: 'Reset code has expired' });
     }
 
-    user.password = await bcrypt.hash(newPassword, 10);
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
     user.reset_code = undefined;
     await user.save();
 

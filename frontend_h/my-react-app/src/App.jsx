@@ -25,6 +25,7 @@ import MyRoom from './pages/student/rooms.jsx';
 import BookingDetails from './pages/admin/bookingDetails.jsx';
 import HostelDetails from './components/common/hostels.jsx';
 import Search from './pages/search.jsx';
+import RoomDetailsById from './pages/landing/roomsById.jsx'
 function App() {
 
 
@@ -38,6 +39,7 @@ function App() {
       <Route path='/login' element={<Login />} />
       <Route path='/forgot-Password' element={<ForgotPassword />} />
       <Route path='/hostels' element={<HostelDetails />} />
+      <Route path='/room-details/:roomId' element={<RoomDetailsById/>}/>
       <Route path='/search' element={<Search />} />
       <Route element={<ProtectedRoute allowedRoles={['SUPERADMIN']} />}>
         <Route path='/superadmin' element={<Outlet />} >
@@ -50,7 +52,7 @@ function App() {
           <Route path='dashboard' element={<AdminDashboard />} />
           <Route path='reapply' element={<AdminReapplyVerification />} />
           <Route path="rooms" element={<RoomDetails />} />
-          <Route path="users" element={<UserDetails />} />
+          <Route path="students" element={<UserDetails />} />
           <Route path="fee" element={<FeeDetails />} />
           <Route path="menu" element={<MenuManager />} />
           <Route path="hostel-images" element={<AddHostelImages />} />

@@ -1,1 +1,89 @@
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================
+   CSS VARIABLES (THEME)
+   ========================= */
+
+/* Light Mode (default) */
+:root {
+  --bg-main: #f8fafc;           /* light background */
+  --bg-card: #ffffff;
+  --bg-section: #eef2ff;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --border-main: #e2e8f0;
+
+  --primary: #2563eb;           /* blue */
+  --primary-hover: #1d4ed8;
+  --accent: #3b82f6;
+}
+
+/* Dark Mode */
+.dark {
+  --bg-main: #0b0d10;
+  --bg-card: #1c1f2a;
+  --bg-section: #151821;
+  --text-main: #ffffff;
+  --text-muted: #9ca3af;
+  --border-main: #1f2937;
+
+  --primary: #f59e0b;           /* amber */
+  --primary-hover: #f97316;
+  --accent: #fb923c;
+}
+
+/* =========================
+   GLOBAL ELEMENT STYLES
+   ========================= */
+
+html,
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+}
+
+/* Cards */
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-main);
+  border-radius: 1rem;
+}
+
+/* Sections */
+.section-bg {
+  background-color: var(--bg-section);
+}
+
+/* Text helpers */
+.text-muted {
+  color: var(--text-muted);
+}
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(
+    to right,
+    var(--primary),
+    var(--accent)
+  );
+  color: #000;
+  font-weight: 600;
+}
+
+.dark .btn-primary {
+  color: #000;
+}
+
+/* Images */
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* Smooth transitions */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}

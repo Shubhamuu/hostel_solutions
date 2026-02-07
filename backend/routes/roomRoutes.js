@@ -10,6 +10,7 @@ router.get('/getallrooms',isAdmin, roomController.getAllRooms);
 router.get('/getroom/:roomId', roomController.getRoomDetails);
 //router.post('/:roomId/images', isAdmin, upload.array('images', 5), roomController.uploadRoomImages);
 router.post('/assignroom', isAdmin, roomController.assignRoom);
+router.post('/confirmbookingadmin', isAdmin, roomController.confirmBookings);
 router.post('/bookroom',isUser, roomController.bookRoom);
 //router.get('/:roomId/images', roomController.getRoomImages);
 router.get('/getAllBooking',isAdmin, roomController.getAllBookings);

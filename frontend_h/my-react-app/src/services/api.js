@@ -109,7 +109,7 @@ apiprivate.interceptors.response.use(
           ✅ REFRESH TOKEN AUTOMATICALLY SENT VIA COOKIE 
           Backend reads: req.cookies.refreshToken
         */
-        const response = await api.get("/auth/access-token");
+        const response = await apiprivate.get("/auth/access-token");
         const { accessToken } = response.data;
 
         if (!accessToken) {

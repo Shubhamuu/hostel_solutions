@@ -2,35 +2,36 @@ import { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router";
 import {
   Calendar,
+  Clock,
+  Users,
   Home,
   AlertCircle,
-  ArrowLeft,
   Loader2,
   CheckCircle,
-  Clock,
-  Info,
   DollarSign,
-  Users,
-  Star,
-  Image as ImageIcon,
   Shield,
+  X,
   Check,
-  X
+  Image as ImageIcon,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { format, addDays, addMonths, differenceInDays } from "date-fns";
 import { apiprivate } from "../../services/api";
+import NavBar from "../../components/common/navbar";
 
 const BookRoom = () => {
   const { roomId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  
-  const [loading, setLoading] = useState(false);
-  const [authChecking, setAuthChecking] = useState(true);
+
   const [roomDetails, setRoomDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [authChecking, setAuthChecking] = useState(true);
   const [formData, setFormData] = useState({
     moveInDate: "",
-    duration: "3",
+    duration: 3,
     agreeToTerms: false,
     agreeToFee: false,
   });
@@ -41,102 +42,65 @@ const BookRoom = () => {
   const [imageIndex, setImageIndex] = useState(0);
   const [showFullImage, setShowFullImage] = useState(false);
 
-  // Get token
-  const getAccessToken = () => localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
+  const getAccessToken = () =>
+    localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken");
 
-  // Authentication check
+  /* ========== AUTH CHECK ========== */
   useEffect(() => {
     const token = getAccessToken();
     if (!token) {
-      navigate("/login", { 
-        state: { 
-          from: location.pathname, 
-          message: "Please login to book a room", 
-          roomId 
-        } 
+      navigate("/login", {
+        state: { from: location.pathname, message: "Please login to book a room", roomId },
       });
       return;
     }
     setAuthChecking(false);
   }, [navigate, location.pathname, roomId]);
 
-  // Set default move-in date (3 days from now) and fetch room details
+  /* ========== FETCH ROOM DETAILS ========== */
   useEffect(() => {
     if (authChecking) return;
 
+    // Set default move-in date 3 days from today
     const defaultDate = addDays(new Date(), 3);
-    setFormData(prev => ({ 
-      ...prev, 
-      moveInDate: format(defaultDate, "yyyy-MM-dd") 
-    }));
+    setFormData((prev) => ({ ...prev, moveInDate: format(defaultDate, "yyyy-MM-dd") }));
 
+    const fetchRoomDetails = async () => {
+      try {
+        const res = await apiprivate.get(`/rooms/getroom/${roomId}`);
+        setRoomDetails(res.data);
+      } catch (err) {
+        setApiError("Failed to fetch room details");
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchRoomDetails();
-  }, [authChecking]);
+  }, [authChecking, roomId]);
 
-  // Fetch room details
-  const fetchRoomDetails = async () => {
-    try {
-      const response = await apiprivate.get(`/rooms/getroom/${roomId}`);
-      setRoomDetails(response.data);
-    } catch (err) {
-      console.error("Room fetch error:", err);
-      setApiError("Failed to fetch room details. Please try again.");
-    }
-  };
+  /* ========== CALCULATIONS ========== */
+  const calculateEndDate = () => addMonths(new Date(formData.moveInDate), parseInt(formData.duration));
+  const calculateTotalAmount = () => (roomDetails ? roomDetails.price  : 0);
+  const getDaysUntilMoveIn = () => differenceInDays(new Date(formData.moveInDate), new Date());
+  const getMonthlyRate = () => (roomDetails ? roomDetails.price : 0);
+  const getMinDate = () => format(addDays(new Date(), 2), "yyyy-MM-dd");
+  const getMaxDate = () => format(addDays(new Date(), 60), "yyyy-MM-dd");
 
-  // Calculate end date
-  const calculateEndDate = () => {
-    if (!formData.moveInDate) return null;
-    return addMonths(new Date(formData.moveInDate), parseInt(formData.duration));
-  };
-
-  // Calculate total amount
-  const calculateTotalAmount = () => {
-    if (!roomDetails) return 0;
-    return roomDetails.price * parseInt(formData.duration);
-  };
-
-  // Calculate days until move-in
-  const getDaysUntilMoveIn = () => {
-    if (!formData.moveInDate) return 0;
-    const today = new Date();
-    const moveIn = new Date(formData.moveInDate);
-    return differenceInDays(moveIn, today);
-  };
-
-  // Calculate monthly rate
-  const getMonthlyRate = () => {
-    if (!roomDetails) return 0;
-    return roomDetails.price;
-  };
-
-  // Form validation
+  /* ========== FORM VALIDATION ========== */
   const validateForm = () => {
     const newErrors = {};
     const selectedDate = new Date(formData.moveInDate);
     const minDate = addDays(new Date(), 2);
-    const daysUntilMoveIn = getDaysUntilMoveIn();
 
-    if (!formData.moveInDate) {
-      newErrors.moveInDate = "Move-in date is required";
-    } else if (selectedDate < minDate) {
-      newErrors.moveInDate = "Move-in date must be at least 2 days from today";
-    } else if (daysUntilMoveIn > 60) {
-      newErrors.moveInDate = "Move-in date cannot be more than 60 days in advance";
-    }
+    if (!formData.moveInDate) newErrors.moveInDate = "Move-in date is required";
+    else if (selectedDate < minDate) newErrors.moveInDate = "Move-in date must be at least 2 days from today";
+    else if (getDaysUntilMoveIn() > 60) newErrors.moveInDate = "Move-in date cannot be more than 60 days in advance";
 
-    if (!formData.agreeToTerms) {
-      newErrors.agreeToTerms = "You must agree to the terms and conditions";
-    }
+    if (!formData.agreeToTerms) newErrors.agreeToTerms = "You must agree to the terms";
+    if (!formData.agreeToFee) newErrors.agreeToFee = "You must acknowledge the fee payment requirement";
 
-    if (!formData.agreeToFee) {
-      newErrors.agreeToFee = "You must acknowledge the fee payment requirement";
-    }
-
-    // Check room availability
-    if (roomDetails && roomDetails.currentOccupancy >= roomDetails.maxCapacity) {
+    if (roomDetails && roomDetails.currentOccupancy >= roomDetails.maxCapacity)
       newErrors.room = "This room is fully occupied";
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -144,18 +108,26 @@ const BookRoom = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: type === "checkbox" ? checked : value 
-    }));
-    
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: "" }));
-    }
-    
+    setFormData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
     if (apiError) setApiError("");
   };
 
+  /* ========== IMAGE CONTROLS ========== */
+  const nextImage = () => {
+    if (roomDetails?.images?.length > 0) {
+      setImageIndex((prev) => (prev + 1) % roomDetails.images.length);
+    }
+  };
+
+  const prevImage = () => {
+    if (roomDetails?.images?.length > 0) {
+      setImageIndex((prev) => (prev - 1 + roomDetails.images.length) % roomDetails.images.length);
+    }
+  };
+
+  /* ========== HANDLE BOOKING ========== */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -173,519 +145,447 @@ const BookRoom = () => {
         moveInDate: formData.moveInDate,
       };
 
-      const response = await apiprivate.post("/rooms/bookRoom", bookingData);
-
+      const res = await apiprivate.post("/rooms/bookRoom", bookingData);
+      setBookingDetails(res.data);
       setSuccess(true);
-      setBookingDetails(response.data);
 
-      // Redirect to dashboard after 5s
-      setTimeout(() => {
-        navigate("/student/dashboard", { 
-          state: { 
-            success: true, 
-            message: "Room booked successfully!", 
-            bookingDetails: response.data 
-          } 
-        });
-      }, 5000);
+      setTimeout(() => navigate("/student/dashboard", { state: { success: true, bookingDetails: res.data } }), 5000);
     } catch (err) {
-      console.error("Booking error:", err);
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.error || 
-                          "Booking failed. Please try again.";
-      setApiError(errorMessage);
+      setApiError(err.response?.data?.message || "Booking failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const getMinDate = () => format(addDays(new Date(), 2), "yyyy-MM-dd");
-  const getMaxDate = () => format(addDays(new Date(), 60), "yyyy-MM-dd");
-
-  // Render loading state
-  if (authChecking) {
+  if (authChecking)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Checking authentication...</p>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100">
+        <Loader2 className="w-12 h-12 animate-spin text-blue-600 mb-4" />
+        <p className="text-gray-600">Checking authentication...</p>
       </div>
     );
-  }
 
-  // Render success state
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+      </div>
+    );
+
+  /* ========== SUCCESS SCREEN ========== */
   if (success && bookingDetails) {
-    const endDate = calculateEndDate();
     const { room, fee, booking, totalAmount } = bookingDetails;
-
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-green-50 to-blue-50">
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center animate-fade-in">
-          <div className="w-20 h-20 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-slow">
-            <CheckCircle className="w-10 h-10 text-white" />
-          </div>
-          
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Booking Confirmed!</h1>
-          <p className="text-gray-600 mb-8">Your room has been successfully booked</p>
+        <div className="max-w-md w-full bg-white dark:bg-[#1C1F2A] rounded-3xl shadow-2xl p-8 text-center">
+          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">Booking Confirmed!</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">Your room has been successfully booked.</p>
 
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-2xl mb-8 space-y-4 border border-blue-100">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700 flex items-center gap-2">
-                <Home size={16} />
-                Room Number:
-              </span>
-              <span className="font-bold text-lg text-gray-900">{room.roomNumber}</span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700 flex items-center gap-2">
-                <Calendar size={16} />
-                Stay Duration:
-              </span>
-              <span className="font-semibold bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
-                {booking.duration} months
-              </span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700 flex items-center gap-2">
-                <Clock size={16} />
-                Move-in Date:
-              </span>
-              <span className="font-semibold">
-                {format(new Date(booking.moveInDate), "MMM dd, yyyy")}
-              </span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700 flex items-center gap-2">
-                <Calendar size={16} />
-                End Date:
-              </span>
-              <span className="font-semibold">
-                {format(new Date(booking.endDate), "MMM dd, yyyy")}
-              </span>
-            </div>
-            
-            <div className="border-t border-blue-200 pt-4 mt-2">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-700 flex items-center gap-2">
-                  <DollarSign size={16} />
-                  Total Amount:
-                </span>
-                <span className="font-bold text-xl text-blue-600">
-                  Rs. {totalAmount?.toLocaleString() || "0"}
-                </span>
-              </div>
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-xl mb-6 border border-blue-100 dark:border-blue-800">
+            <div className="space-y-2 text-left">
+              <p className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-300">Room Number:</span>
+                <span className="font-semibold">{room.roomNumber}</span>
+              </p>
+              <p className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-300">Move-in Date:</span>
+                <span className="font-semibold">{format(new Date(booking.moveInDate), "MMM dd, yyyy")}</span>
+              </p>
+              <p className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-300">Duration:</span>
+                <span className="font-semibold">{booking.duration} months</span>
+              </p>
+              <p className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-300">End Date:</span>
+                <span className="font-semibold">{format(new Date(booking.endDate), "MMM dd, yyyy")}</span>
+              </p>
+              <p className="flex justify-between text-lg font-bold mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
+                <span className="text-gray-900 dark:text-white">Total Amount For Booking:</span>
+                <span className="text-blue-600 dark:text-blue-400">Rs. {totalAmount?.toLocaleString()}</span>
+              </p>
             </div>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <div className="text-left">
-                <p className="font-medium text-yellow-800 mb-1">Payment Required</p>
-                <p className="text-yellow-700 text-sm">
-                  A fee entry of <span className="font-bold">Rs. {fee?.amountDue?.toLocaleString() || "0"}</span> has been created. 
-                  Please complete the payment before your move-in date to secure your booking.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
+          <div className="flex gap-4">
             <button
               onClick={() => navigate("/student/dashboard")}
-              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:-translate-y-1"
+              className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all duration-200 hover:shadow-lg"
             >
               Go to Dashboard
             </button>
-            
             <button
-              onClick={() => navigate(`/room/${roomId}`)}
-              className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+              onClick={() => navigate(`/room-details/${roomId}`)}
+              className="flex-1 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold rounded-xl transition-all duration-200"
             >
               View Room Details
             </button>
           </div>
-
-          <p className="text-gray-400 text-sm mt-6">
-            Redirecting to dashboard in 5 seconds...
-          </p>
         </div>
       </div>
     );
   }
 
-  // Main booking form
+  /* ========== MAIN BOOKING FORM ========== */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        {/* Back button */}
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0B0D10] text-gray-900 dark:text-white">
+      <NavBar />
+      
+      {/* Back Button */}
+      <div className="max-w-7xl mx-auto px-6 pt-8">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 mb-8 text-gray-600 hover:text-blue-600 transition-colors group"
+          className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors mb-6"
         >
-          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          <span>Back to Available Rooms</span>
-        </button>
+          <ArrowLeft className="w-5 h-5" />
+          <span>Back</span>
+        </button>   
+      </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Room Details Card */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Room Images */}
-            {roomDetails?.images && roomDetails.images.length > 0 && (
-              <div className="bg-white rounded-3xl shadow-xl p-6">
-                <div className="relative aspect-video rounded-2xl overflow-hidden bg-gray-100 mb-4">
-                  <img
-                    src={roomDetails.images[imageIndex].url}
-                    alt={`Room ${roomDetails.roomNumber} - Image ${imageIndex + 1}`}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 cursor-pointer"
-                    onClick={() => setShowFullImage(true)}
-                  />
-                  
-                  {roomDetails.images.length > 1 && (
-                    <>
-                      <button
-                        onClick={() => setImageIndex((prev) => (prev === 0 ? roomDetails.images.length - 1 : prev - 1))}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm w-10 h-10 rounded-full flex items-center justify-center hover:bg-white transition-colors"
-                      >
-                        <ArrowLeft className="w-5 h-5" />
-                      </button>
-                      
-                      <button
-                        onClick={() => setImageIndex((prev) => (prev === roomDetails.images.length - 1 ? 0 : prev + 1))}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm w-10 h-10 rounded-full flex items-center justify-center hover:bg-white transition-colors"
-                      >
-                        <ArrowLeft className="w-5 h-5 rotate-180" />
-                      </button>
-                      
-                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                        {roomDetails.images.map((_, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => setImageIndex(idx)}
-                            className={`w-2 h-2 rounded-full transition-all ${idx === imageIndex ? 'bg-white w-6' : 'bg-white/50'}`}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  )}
-                  
-                  <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium">{imageIndex + 1}/{roomDetails.images.length}</span>
-                  </div>
-                </div>
-
-                {/* Thumbnail images */}
+      <div className="max-w-7xl mx-auto px-6 py-8 grid lg:grid-cols-3 gap-8">
+        {/* ROOM DETAILS */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* IMAGE WITH CONTROLS */}
+          <div className="relative rounded-2xl overflow-hidden bg-gray-200 dark:bg-gray-900">
+            {roomDetails?.images?.length > 0 ? (
+              <>
+                <img
+                  src={roomDetails.images[imageIndex].url}
+                  alt={`Room ${roomDetails.roomNumber}`}
+                  className="w-full h-96 object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+                  onClick={() => setShowFullImage(true)}
+                />
+                
+                {/* Image Navigation */}
                 {roomDetails.images.length > 1 && (
-                  <div className="grid grid-cols-4 gap-3">
-                    {roomDetails.images.slice(0, 4).map((img, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setImageIndex(idx)}
-                        className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${idx === imageIndex ? 'border-blue-500 ring-2 ring-blue-200' : 'border-transparent'}`}
-                      >
-                        <img
-                          src={img.url}
-                          alt={`Thumbnail ${idx + 1}`}
-                          className="w-full h-full object-cover"
+                  <>
+                    <button
+                      onClick={prevImage}
+                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all duration-200"
+                    >
+                      <ChevronLeft className="w-6 h-6" />
+                    </button>
+                    <button
+                      onClick={nextImage}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all duration-200"
+                    >
+                      <ChevronRight className="w-6 h-6" />
+                    </button>
+                    
+                    {/* Image Indicator */}
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                      {roomDetails.images.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setImageIndex(idx)}
+                          className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                            idx === imageIndex 
+                              ? "bg-blue-500 w-8" 
+                              : "bg-white/50 hover:bg-white/80"
+                          }`}
                         />
-                      </button>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </>
                 )}
-              </div>
-            )}
-
-            {/* Room Information */}
-            {roomDetails && (
-              <div className="bg-white rounded-3xl shadow-xl p-8">
-                <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                  <div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Room {roomDetails.roomNumber}</h1>
-                    <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${roomDetails.type === 'Deluxe' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {roomDetails.type} Room
-                      </span>
-                      <span className="text-gray-600 flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        {roomDetails.currentOccupancy}/{roomDetails.maxCapacity} occupied
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <div className="text-4xl font-bold text-blue-600">
-                      Rs. {roomDetails.price.toLocaleString()}
-                    </div>
-                    <p className="text-gray-500 text-sm">per month</p>
-                  </div>
-                </div>
-
-                {/* Room Description */}
-                {roomDetails.description && (
-                  <div className="mb-8">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Description</h3>
-                    <p className="text-gray-600 leading-relaxed">{roomDetails.description}</p>
-                  </div>
-                )}
-
-                {/* Room Features Grid */}
-                <div className="grid md:grid-cols-2 gap-6 mb-8">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Room Details</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Capacity:</span>
-                        <span className="font-medium">{roomDetails.maxCapacity} persons</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Current Occupancy:</span>
-                        <span className={`font-medium ${roomDetails.currentOccupancy < roomDetails.maxCapacity ? 'text-green-600' : 'text-red-600'}`}>
-                          {roomDetails.currentOccupancy} / {roomDetails.maxCapacity}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Room Status:</span>
-                        <span className={`font-medium flex items-center gap-2 ${roomDetails.isActive ? 'text-green-600' : 'text-red-600'}`}>
-                          {roomDetails.isActive ? (
-                            <>
-                              <Check className="w-4 h-4" />
-                              Available
-                            </>
-                          ) : (
-                            <>
-                              <X className="w-4 h-4" />
-                              Unavailable
-                            </>
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Hostel Information</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Hostel ID:</span>
-                        <span className="font-medium text-sm">{roomDetails.hostelId?.substring(0, 12)}...</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Created:</span>
-                        <span className="font-medium">{format(new Date(roomDetails.createdAt), 'MMM dd, yyyy')}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Last Updated:</span>
-                        <span className="font-medium">{format(new Date(roomDetails.updatedAt), 'MMM dd, yyyy')}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Availability Alert */}
-                {roomDetails.currentOccupancy >= roomDetails.maxCapacity && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium text-red-800">Room Fully Occupied</p>
-                        <p className="text-red-700 text-sm">
-                          This room has reached maximum capacity. Please choose another room.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-96 text-gray-500">
+                <ImageIcon className="w-16 h-16 mb-4" />
+                <p>No Image Available</p>
               </div>
             )}
           </div>
 
-          {/* Booking Form Card */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-3xl shadow-xl p-8 sticky top-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-8">Book This Room</h2>
-
-              <form onSubmit={handleSubmit} className="space-y-8">
-                {/* Move-in Date */}
-                <div>
-                  <label className="block mb-3 font-semibold text-gray-800 flex items-center gap-2">
-                    <Calendar className="w-5 h-5" />
-                    Move-in Date
-                  </label>
-                  <input
-                    type="date"
-                    name="moveInDate"
-                    value={formData.moveInDate}
-                    onChange={handleInputChange}
-                    min={getMinDate()}
-                    max={getMaxDate()}
-                    className={`w-full p-4 border rounded-xl transition-all ${errors.moveInDate ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200'}`}
+          {/* IMAGE THUMBNAILS */}
+          {roomDetails?.images?.length > 1 && (
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {roomDetails.images.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setImageIndex(idx)}
+                  className={`flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                    idx === imageIndex 
+                      ? "border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/20" 
+                      : "border-transparent hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+                >
+                  <img
+                    src={img.url}
+                    alt={`thumb-${idx}`}
+                    className="w-20 h-20 object-cover"
                   />
-                  {errors.moveInDate && (
-                    <p className="text-red-600 text-sm mt-2 flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.moveInDate}
-                    </p>
-                  )}
-                  {formData.moveInDate && (
-                    <p className="text-sm text-gray-500 mt-2">
-                      Move in {getDaysUntilMoveIn()} days from now
-                    </p>
-                  )}
-                </div>
+                </button>
+              ))}
+            </div>
+          )}
 
-                {/* Duration */}
-                <div>
-                  <label className="block mb-3 font-semibold text-gray-800 flex items-center gap-2">
-                    <Clock className="w-5 h-5" />
-                    Stay Duration
-                  </label>
-                  <select
-                    name="duration"
-                    value={formData.duration}
-                    onChange={handleInputChange}
-                    className="w-full p-4 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                  >
-                    {[1, 2, 3, 6, 12].map((m) => (
-                      <option key={m} value={m}>
-                        {m} month{m > 1 ? "s" : ""}
-                      </option>
-                    ))}
-                  </select>
+          {/* ROOM INFO */}
+          <div className="bg-white dark:bg-[#1C1F2A] rounded-2xl p-8 shadow-lg">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-3xl font-bold mb-2">{roomDetails?.roomNumber}</h2>
+                <div className="flex items-center gap-4 text-gray-600 dark:text-gray-300">
+                  <span className="flex items-center gap-1">
+                    <Home className="w-4 h-4" />
+                    {roomDetails?.type}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Users className="w-4 h-4" />
+                    {roomDetails?.currentOccupancy}/{roomDetails?.maxCapacity} Occupied
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <DollarSign className="w-4 h-4" />
+                    Rs. {roomDetails?.price?.toLocaleString()}/month
+                  </span>
                 </div>
+              </div>
+              <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-4 py-2 rounded-full font-semibold">
+                {roomDetails?.currentOccupancy < roomDetails?.maxCapacity ? "Available" : "Fully Booked"}
+              </div>
+            </div>
+            
+            <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+              {roomDetails?.description}
+            </p>
+          </div>
+        </div>
 
-                {/* Price Summary */}
-                {roomDetails && (
-                  <div className="bg-blue-50 rounded-xl p-5 space-y-4">
-                    <h3 className="font-semibold text-gray-800">Price Summary</h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Monthly Rate:</span>
-                        <span className="font-medium">Rs. {getMonthlyRate().toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Duration:</span>
-                        <span className="font-medium">{formData.duration} months</span>
-                      </div>
-                      <div className="border-t border-blue-200 pt-3">
-                        <div className="flex justify-between items-center">
-                          <span className="font-semibold text-gray-800">Total Amount:</span>
-                          <span className="text-2xl font-bold text-blue-600">
-                            Rs. {calculateTotalAmount().toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {calculateEndDate() && (
-                      <div className="text-sm text-gray-500 text-center pt-2 border-t border-blue-200">
-                        Your stay ends on {format(calculateEndDate(), "MMMM dd, yyyy")}
-                      </div>
-                    )}
-                  </div>
+        {/* BOOKING CARD */}
+        <div className="lg:col-span-1">
+          <div className="bg-white dark:bg-[#1C1F2A] rounded-2xl p-8 shadow-lg sticky top-24">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h2 className="text-2xl font-bold">Book This Room</h2>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Move-in Date */}
+              <div className="space-y-2">
+                <label className="block font-medium">Move-in Date</label>
+                <input
+                  type="date"
+                  name="moveInDate"
+                  value={formData.moveInDate}
+                  onChange={handleInputChange}
+                  min={getMinDate()}
+                  max={getMaxDate()}
+                  className="w-full p-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-transparent focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+                />
+                {errors.moveInDate && (
+                  <p className="text-red-500 text-sm flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {errors.moveInDate}
+                  </p>
                 )}
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <Clock className="w-4 h-4 inline mr-1" />
+                  Move in {getDaysUntilMoveIn()} days from now
+                </p>
+              </div>
 
-                {/* Terms and Conditions */}
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
+              {/* Duration */}
+  {/* Duration */}
+<div className="space-y-3">
+  <label className="block font-medium">Stay Duration (Months)</label>
+  
+ 
+
+  <div className="relative">
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      Or enter custom duration (1-60 months)
+    </label>
+    <div className="flex items-center gap-3">
+      <input
+        type="number"
+        name="duration"
+        min="1"
+        max="60"
+        value={formData.duration}
+        onChange={handleInputChange}
+        className="w-full p-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-transparent focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        placeholder="Enter number of months"
+      />
+      <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+        <span className="text-sm font-medium">months</span>
+      </div>
+    </div>
+    
+    <div className="flex items-center justify-between mt-2">
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        <Clock className="w-3 h-3 inline mr-1" />
+        Your stay ends on {format(calculateEndDate(), "MMM dd, yyyy")}
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setFormData(prev => ({ 
+            ...prev, 
+            duration: Math.max(1, prev.duration - 1) 
+          }))}
+          className="p-1.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          disabled={formData.duration <= 1}
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setFormData(prev => ({ 
+            ...prev, 
+            duration: Math.min(60, prev.duration + 1) 
+          }))}
+          className="p-1.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          disabled={formData.duration >= 60}
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+              {/* Terms */}
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="relative mt-1">
                     <input
                       type="checkbox"
-                      id="agreeToTerms"
                       name="agreeToTerms"
                       checked={formData.agreeToTerms}
                       onChange={handleInputChange}
-                      className="mt-1 w-5 h-5"
+                      className="w-5 h-5 rounded border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500"
                     />
-                    <label htmlFor="agreeToTerms" className="text-gray-700 text-sm">
-                      I agree to the hostel terms and conditions, including rules, cancellation policy, and code of conduct.
-                    </label>
                   </div>
-                  {errors.agreeToTerms && (
-                    <p className="text-red-600 text-sm">{errors.agreeToTerms}</p>
-                  )}
-
-                  <div className="flex items-start gap-3">
+                  <label className="text-sm">
+                    I agree to the hostel rules and policies
+                    {errors.agreeToTerms && (
+                      <span className="text-red-500 text-sm block mt-1">{errors.agreeToTerms}</span>
+                    )}
+                  </label>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="relative mt-1">
                     <input
                       type="checkbox"
-                      id="agreeToFee"
                       name="agreeToFee"
                       checked={formData.agreeToFee}
                       onChange={handleInputChange}
-                      className="mt-1 w-5 h-5"
+                      className="w-5 h-5 rounded border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500"
                     />
-                    <label htmlFor="agreeToFee" className="text-gray-700 text-sm">
-                      I acknowledge that I must pay the full amount before the move-in date to secure my booking.
-                    </label>
                   </div>
-                  {errors.agreeToFee && (
-                    <p className="text-red-600 text-sm">{errors.agreeToFee}</p>
-                  )}
+                  <label className="text-sm">
+                    I acknowledge the payment must be made before move-in
+                    {errors.agreeToFee && (
+                      <span className="text-red-500 text-sm block mt-1">{errors.agreeToFee}</span>
+                    )}
+                  </label>
                 </div>
+              </div>
 
-                {/* API Error */}
-                {apiError && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium text-red-800">Booking Error</p>
-                        <p className="text-red-700 text-sm">{apiError}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+              {/* Total */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-medium">Total Amount</span>
+                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    Rs. {calculateTotalAmount().toLocaleString()}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <Calendar className="w-4 h-4 inline mr-1" />
+                  Your stay ends on {format(calculateEndDate(), "MMM dd, yyyy")}
+                </p>
+              </div>
 
-                {/* Submit Button */}
+              {/* API Error */}
+              {apiError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 rounded-xl">
+                  <p className="text-red-600 dark:text-red-400 text-sm flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    {apiError}
+                  </p>
+                </div>
+              )}
+
+              {/* Room Occupancy Warning */}
+              {roomDetails?.currentOccupancy >= roomDetails?.maxCapacity && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 rounded-xl">
+                  <p className="text-amber-600 dark:text-amber-400 text-sm flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    This room is fully occupied
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="space-y-3 pt-2">
                 <button
                   type="submit"
                   disabled={loading || (roomDetails?.currentOccupancy >= roomDetails?.maxCapacity)}
-                  className={`w-full py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:-translate-y-1 ${
-                    loading || (roomDetails?.currentOccupancy >= roomDetails?.maxCapacity)
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl'
-                  }`}
+                  className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25 flex items-center justify-center gap-2"
                 >
                   {loading ? (
-                    <span className="flex items-center justify-center gap-3">
+                    <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      Processing Booking...
-                    </span>
-                  ) : roomDetails?.currentOccupancy >= roomDetails?.maxCapacity ? (
-                    "Room Full"
+                      Processing...
+                    </>
                   ) : (
-                    `Book Now - Rs. ${calculateTotalAmount().toLocaleString()}`
+                    <>
+                      <Check className="w-5 h-5" />
+                      Book Now
+                    </>
                   )}
                 </button>
-
-                {/* Security Note */}
-                <div className="text-center">
-                  <p className="text-sm text-gray-500 flex items-center justify-center gap-2">
-                    <Shield className="w-4 h-4" />
-                    Your booking information is secure and encrypted
-                  </p>
-                </div>
-              </form>
-            </div>
+                
+                <button
+                  type="button"
+                  onClick={() => navigate(-1)}
+                  className="w-full py-3.5 border border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-xl transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
 
       {/* Full Image Modal */}
       {showFullImage && roomDetails?.images && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setShowFullImage(false)}>
-          <button className="absolute top-6 right-6 text-white/80 hover:text-white">
-            <X className="w-8 h-8" />
-          </button>
-          <img
-            src={roomDetails.images[imageIndex].url}
-            alt="Full view"
-            className="max-w-full max-h-full object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
+        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4">
+          <div className="relative max-w-6xl w-full max-h-[90vh]">
+            <button
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+              onClick={() => setShowFullImage(false)}
+            >
+              <X className="w-8 h-8" />
+            </button>
+            <img
+              src={roomDetails.images[imageIndex].url}
+              alt="Full view"
+              className="w-full h-full max-h-[90vh] object-contain rounded-lg"
+            />
+            {roomDetails.images.length > 1 && (
+              <>
+                <button
+                  onClick={prevImage}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-all duration-200"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={nextImage}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-3 rounded-full transition-all duration-200"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

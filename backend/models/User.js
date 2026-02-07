@@ -12,6 +12,7 @@ const UserSchema = new Schema({
     required: true
   },
 
+
   // Admin approval system
   approvalStatus: {
     type: String,
@@ -30,7 +31,7 @@ const UserSchema = new Schema({
     ref: 'Hostel',
     default: null
   },
-
+  hostelname: { type: String, default: null },
   // Verification documents (Cloudinary)
   verificationDocuments: [
     {
@@ -53,7 +54,7 @@ const UserSchema = new Schema({
   isVerified: { type: Boolean, default: false },
   verifiedAt: { type: Date, default: null },
   photoUrl: { type: String },
-
+// STUDENT
   roomId: { type: Schema.Types.ObjectId, ref: 'Room', default: null },
   hostelId: { type: Schema.Types.ObjectId, ref: 'Hostel', default: null },
 

@@ -135,7 +135,7 @@ exports.bookRoom = async (req, res) => {
     // 🔐 Verify token (assumes Bearer token)
     const token = verifyToken(req.headers.authorization?.split(" ")[1]);
     const useremail = token.email;
-
+  
     // 🧾 Validate request BEFORE transaction
     const { roomId, duration, moveInDate } = req.body;
 
@@ -194,6 +194,9 @@ exports.bookRoom = async (req, res) => {
       const user = await User.findOne({ email: useremail }).session(session);
 
       if (!user) throw new Error("USER_NOT_FOUND");
+      if (user.roomId) throw new Error("ALREADY_HAS_ROOM");
+      const bookingExisting = await Booking.findOne({ studentId: user._id, status: "PENDING" }).session(session);
+      if (bookingExisting) throw new Error("ALREADY_HAS_PENDING_BOOKING");
       const existingFees = await Fee.findOne({
   studentId: user._id,
   status: { $in: ["PENDING", "PARTIAL"] }, // Only block if fee not paid
@@ -327,10 +330,21 @@ exports.cancelBooking = async (req, res) => {
       return res.status(404).json({ message: "Room not found" });
     }
    // room.currentOccupancy -= 1;
-    room.currentBooking -= 1;
+   const bookingUser = await Booking.findOne({
+  studentId: booking.studentId,
+  status: "CONFIRMED"
+});
+
+if (bookingUser) {
+  console.log(bookingUser);
+  return res.status(400).json({ message: "Cannot cancel booking after confirmation" });
+}
+
+    room.booking -= 1;
     await room.save();
     await Booking.findByIdAndUpdate(bookingId, { status: "CANCELLED" });
     await Fee.findOneAndDelete({ studentId: booking.studentId });
+ 
     await User.findByIdAndUpdate(booking.studentId, { roomId: null, roomNumber: null, moveInDate: null, bookingEndDate: null, hostelId: null });
     return res.status(200).json({ message: "Booking cancelled successfully" });
   } catch (error) {
@@ -344,11 +358,11 @@ exports.assignRoom = async (req, res) => {
   session.startTransaction();
 
   try {
-    const { roomId, userId } = req.body;
+    const { roomId, userId, feeAmount } = req.body;
 
-    if (!roomId || !userId) {
+    if (!roomId || !userId || !feeAmount) {
       await session.abortTransaction();
-      return res.status(400).json({ message: 'Room ID and User ID are required' });
+      return res.status(400).json({ message: 'Room ID and User ID and feeAmount are required' });
     }
 
     if (!mongoose.Types.ObjectId.isValid(roomId) || !mongoose.Types.ObjectId.isValid(userId)) {
@@ -390,17 +404,7 @@ exports.assignRoom = async (req, res) => {
     }
 
     // Check for existing unpaid fee
-    const existingFee = await Fee.findOne({
-      studentId: user._id,
-      status: { $ne: 'PAID' },
-    }).session(session);
 
-    if (existingFee) {
-      await session.abortTransaction();
-      return res.status(400).json({
-        message: 'User has an outstanding fee. Please resolve it first.',
-      });
-    }
 
     // Increment room occupancy
     room.currentOccupancy = occupancy + 1;
@@ -587,6 +591,10 @@ exports.leaveRoom = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+    const bookings = await Booking.find({ studentId: user._id, status: "PENDING" });
+    if (bookings.length !== 0) {
+      return res.status(403).json({ message: "User has active bookings procced to cancel booking" });
+    }
     const { roomId } = req.params;
     const room = await Room.findById(roomId);
     if (!room) {
@@ -631,6 +639,94 @@ exports.getAllBookings = async (req, res) => {
   } catch (err) {
     console.error("Error getting bookings:", err);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+exports.confirmBookings = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { roomId, userId, feeAmount, bookingId } = req.body;
+    
+    if (!roomId || !userId || !feeAmount || !bookingId) {
+      throw new Error('roomId, userId, feeAmount and bookingId are required');
+    }
+
+    if (
+      !mongoose.Types.ObjectId.isValid(roomId) ||
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(bookingId)
+    ) {
+      throw new Error('Invalid ObjectId');
+    }
+
+    const room = await Room.findById(roomId).session(session);
+    if (!room) throw new Error('Room not found');
+
+    if (!room.isActive) throw new Error('Room is inactive');
+
+    if ((room.currentOccupancy ?? 0) >= room.maxCapacity) {
+      throw new Error('Room is already full');
+    }
+
+    const user = await User.findById(userId).session(session);
+    if (!user) throw new Error('User not found');
+
+    if (user.roomId != roomId) {
+      throw new Error('User already has another room assigned');
+    }
+
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      studentId: userId,
+      status: 'PENDING',
+    }).session(session);
+
+    if (!booking) throw new Error('Pending booking not found');
+
+    const fee = await Fee.findOne({
+      studentId: userId,
+      
+    }).session(session);
+
+    if (!fee) throw new Error('Fee record not found');
+
+    // ✅ Update room
+    room.currentOccupancy += 1;
+    await room.save({ session });
+
+    // ✅ Assign room to user
+  //  user.roomId = room._id;
+    await user.save({ session });
+
+    // ✅ Update fee
+    fee.amountPaid = feeAmount;
+    fee.status = 'PAID';
+    await fee.save({ session });
+
+    // ✅ Confirm booking
+    booking.status = 'CONFIRMED';
+    await booking.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(200).json({
+      message: 'Booking confirmed successfully',
+      room,
+      booking,
+      fee,
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error('Confirm booking error:', err.message);
+
+    res.status(400).json({
+      message: err.message,
+    });
   }
 };
 

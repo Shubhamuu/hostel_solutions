@@ -13,14 +13,13 @@ import { useNavigate } from "react-router";
 import NavBar from "../../components/common/navbar";
 import { useFetch } from "../../hooks/useFetch";
 
-const HostelDetails= () => {
+const HostelDetails = () => {
   const navigate = useNavigate();
-
   const { data, loading } = useFetch("/hostels");
   const hostels = Array.isArray(data?.data) ? data.data : [];
 
   return (
-    <div className="min-h-screen bg-[#0B0D10] text-white">
+    <div className="min-h-screen bg-white dark:bg-[#0B0D10] text-gray-900 dark:text-white transition-colors">
       <NavBar />
 
       {/* HEADER */}
@@ -28,7 +27,7 @@ const HostelDetails= () => {
         <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
           All Available Hostels
         </h1>
-        <p className="text-gray-400 max-w-2xl mx-auto">
+        <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
           Browse complete hostel details including management, contact info,
           location, and facilities.
         </p>
@@ -37,8 +36,9 @@ const HostelDetails= () => {
       {/* CONTENT */}
       <section className="pb-24">
         <div className="max-w-7xl mx-auto px-6">
+
           <div className="flex items-center gap-3 mb-8">
-            <Home className="text-amber-400 w-7 h-7" />
+            <Home className="text-amber-500 w-7 h-7" />
             <h2 className="text-2xl font-bold">Hostel Listings</h2>
           </div>
 
@@ -51,12 +51,18 @@ const HostelDetails= () => {
               {hostels.map((hostel) => (
                 <div
                   key={hostel._id}
-                  className="bg-[#1C1F2A] border border-gray-800 rounded-2xl p-6 hover:border-amber-500/40 transition"
+                  className="bg-gray-100 dark:bg-[#1C1F2A]
+                             border border-gray-200 dark:border-gray-800
+                             rounded-2xl p-6
+                             hover:border-amber-500/40
+                             transition"
                 >
                   <div className="grid md:grid-cols-3 gap-6">
-                    
+
                     {/* IMAGE */}
-                    <div className="h-48 bg-gray-900 rounded-xl overflow-hidden flex items-center justify-center">
+                    <div className="h-48 rounded-xl overflow-hidden
+                                    bg-gray-200 dark:bg-gray-900
+                                    flex items-center justify-center">
                       {hostel.images?.length > 0 ? (
                         <img
                           src={hostel.images[0].url}
@@ -77,12 +83,12 @@ const HostelDetails= () => {
                         {hostel.name}
                       </h3>
 
-                      <p className="flex items-center gap-2 text-gray-400 text-sm mb-3">
+                      <p className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm mb-3">
                         <MapPin className="w-4 h-4" />
                         {hostel.address}
                       </p>
 
-                      <div className="grid sm:grid-cols-2 gap-3 text-sm text-gray-400 mb-4">
+                      <div className="grid sm:grid-cols-2 gap-3 text-sm text-gray-600 dark:text-gray-400 mb-4">
                         <p className="flex items-center gap-2">
                           <User className="w-4 h-4" />
                           Admin: {hostel.adminId?.name || "N/A"}
@@ -109,14 +115,18 @@ const HostelDetails= () => {
                       </div>
 
                       {hostel.description && (
-                        <p className="text-gray-500 text-sm mb-4">
+                        <p className="text-gray-600 dark:text-gray-500 text-sm mb-4">
                           {hostel.description}
                         </p>
                       )}
 
                       <button
                         onClick={() => navigate(`/rooms/${hostel._id}`)}
-                        className="mt-auto self-start flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-black font-semibold hover:scale-[1.02] transition"
+                        className="mt-auto self-start flex items-center gap-2
+                                   px-6 py-3 rounded-xl
+                                   bg-gradient-to-r from-amber-500 to-orange-500
+                                   text-black font-semibold
+                                   hover:scale-[1.03] transition"
                       >
                         View Rooms
                         <ChevronRight className="w-5 h-5" />

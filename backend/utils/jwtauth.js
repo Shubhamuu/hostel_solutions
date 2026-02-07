@@ -13,32 +13,41 @@ const generateTokens = async ({ _id, name, email, role }) => {
   const refreshToken = jwt.sign(payload, REFRESH_SECRET, { expiresIn: "7d" });
 
   await new Token({ userId: _id, token: refreshToken }).save();
-
+console.log("Generated tokens for user:", _id);
   return { accessToken, refreshToken };
 };
 
 const generateaccessToken = (userData) => {
-  const payload = { email: userData.email, name: userData.name, role: userData.role };
+  const payload = { id: userData.id, email: userData.email, name: userData.name, role: userData.role };
   const accessToken = jwt.sign(payload, ACCESS_SECRET, { expiresIn: "15m" });
   return { accessToken };
 };
 
 // Verify refresh token
-const verifyRefreshToken = async (token) => {
+const verifyRefreshToken = async (refreshToken) => {
   try {
-    const decoded = jwt.verify(token, REFRESH_SECRET);
-    const storedToken = await Token.findOne({ token });
+    if (!refreshToken) return null;
+
+    // 1. Verify JWT signature & expiry
+    const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
+console.log("Decoded refresh token:", decoded);
+    // 2. Check DB for existence AND ownership
+    const storedToken = await Token.findOne({
+      token: refreshToken,
+      userId: decoded.id, // MUST match
+    });
 
     if (!storedToken) {
-      throw new Error("Token not found in database");
+      console.log("Refresh token not found in DB");
+      return null; // revoked or reused token
     }
 
-    console.log("Refresh token verified successfully.");
     return decoded;
-  } catch (err) {
+  } catch (error) {
     return null;
   }
 };
+
 
 // Remove refresh token on logout
 const removeRefreshToken = async (token) => {

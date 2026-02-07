@@ -7,6 +7,7 @@ const getUserFromToken = (token) => {
   try {
     const decoded = jwt.verify(token, ACCESS_SECRET);
     return {
+      id: decoded.id,
       name: decoded.name,
       email: decoded.email,
       role: decoded.role,

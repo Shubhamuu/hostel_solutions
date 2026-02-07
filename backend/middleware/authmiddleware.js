@@ -78,6 +78,7 @@ exports.isSuperAdmin = (req, res, next) => {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, ACCESS_SECRET);
+   // console.log("decoded superadmin",decoded);
     req.user = decoded;
   }
     catch (err) { 

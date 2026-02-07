@@ -8,7 +8,6 @@ import {
   Loader2,
   Eye,
   Search,
-  Filter,
   Download,
   Calendar,
   UserCheck,
@@ -17,6 +16,13 @@ import {
   Building,
   ChevronDown,
   ChevronUp,
+  Shield,
+  RefreshCw,
+  AlertCircle,
+  CheckSquare,
+  XSquare,
+  Users,
+  FileCheck,
 } from "lucide-react";
 
 export default function SuperAdminDashboard() {
@@ -26,7 +32,6 @@ export default function SuperAdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [expandedAdmin, setExpandedAdmin] = useState(null);
-  const [showDocumentModal, setShowDocumentModal] = useState(null);
 
   /* ================= FETCH ADMINS ================= */
   const fetchAdmins = async () => {
@@ -36,7 +41,6 @@ export default function SuperAdminDashboard() {
       setAdmins(res.data);
     } catch (err) {
       console.error("Failed to load admins", err);
-      alert("Failed to load admins. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -73,7 +77,7 @@ export default function SuperAdminDashboard() {
     );
   }, [admins]);
 
-  /* ================= APPROVE ================= */
+  /* ================= ACTIONS ================= */
   const approveAdmin = async (adminId) => {
     try {
       setActionLoading(`approve-${adminId}`);
@@ -87,16 +91,13 @@ export default function SuperAdminDashboard() {
         )
       );
     } catch (err) {
-      alert(err?.response?.data?.message || "Approval failed");
+      console.error("Approval failed", err);
     } finally {
       setActionLoading(null);
     }
   };
 
-  /* ================= REJECT ================= */
   const rejectAdmin = async (adminId) => {
-    if (!window.confirm("Are you sure you want to reject this admin application?")) return;
-
     try {
       setActionLoading(`reject-${adminId}`);
       await apiprivate.post("/users/admin/reject", { adminId });
@@ -109,22 +110,19 @@ export default function SuperAdminDashboard() {
         )
       );
     } catch (err) {
-      alert(err?.response?.data?.message || "Rejection failed");
+      console.error("Rejection failed", err);
     } finally {
       setActionLoading(null);
     }
   };
 
-  /* ================= DELETE ================= */
   const deleteAdmin = async (adminId) => {
-    if (!window.confirm("Are you sure you want to delete this admin permanently? This action cannot be undone.")) return;
-
     try {
       setActionLoading(`delete-${adminId}`);
       await apiprivate.delete(`/user/admin/${adminId}`);
       setAdmins((prev) => prev.filter((a) => a._id !== adminId));
     } catch (err) {
-      alert("Delete failed. Please try again.");
+      console.error("Delete failed", err);
     } finally {
       setActionLoading(null);
     }
@@ -143,102 +141,118 @@ export default function SuperAdminDashboard() {
   /* ================= LOADING STATE ================= */
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center">
-          <Loader2 className="animate-spin text-indigo-600 mb-4" size={48} />
-          <h2 className="text-xl font-semibold text-gray-700">Loading Admin Applications</h2>
-          <p className="text-gray-500 mt-2">Please wait while we fetch the data...</p>
+      <div className="min-h-screen bg-gradient-to-br from-[#0B0D10] via-[#111827] to-[#0B0D10] flex items-center justify-center p-4">
+        <div className="bg-gray-900/50 backdrop-blur-sm p-8 rounded-2xl border border-gray-800 shadow-2xl flex flex-col items-center">
+          <Loader2 className="animate-spin text-amber-400 mb-4" size={48} />
+          <h2 className="text-xl font-semibold text-white">Loading Admin Applications</h2>
+          <p className="text-gray-400 mt-2">Fetching data from server...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6">
-      {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-[#0B0D10] via-[#111827] to-[#0B0D10] px-4 py-8 sm:px-6 lg:px-8 text-white">
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Admin Applications Dashboard</h1>
-            <p className="text-gray-600 mt-2">Review and manage hostel admin applications</p>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl">
+                <Shield className="text-white" size={24} />
+              </div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
+                Admin Applications
+              </h1>
+            </div>
+            <p className="text-gray-400">Review and manage hostel admin applications</p>
           </div>
+          
           <button
             onClick={fetchAdmins}
-            className="mt-4 md:mt-0 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+            className="mt-4 md:mt-0 px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all duration-300 flex items-center gap-2 group"
           >
-            <Loader2 size={18} className={loading ? "animate-spin" : ""} />
-            Refresh
+            <RefreshCw size={18} className={loading ? "animate-spin" : "group-hover:rotate-180 transition-transform"} />
+            Refresh Data
           </button>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-gray-900/40 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 hover:border-blue-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Total Applications</p>
-                <p className="text-2xl font-bold text-gray-800">{statusCounts.ALL}</p>
+                <p className="text-sm text-gray-400">Total Applications</p>
+                <p className="text-2xl font-bold text-white mt-1">{statusCounts.ALL}</p>
               </div>
-              <UserCheck className="text-blue-500" size={24} />
+              <div className="p-3 rounded-xl bg-blue-500/20 text-blue-400">
+                <Users size={24} />
+              </div>
             </div>
           </div>
           
-          <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500">
+          <div className="bg-gray-900/40 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 hover:border-yellow-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Pending Review</p>
-                <p className="text-2xl font-bold text-gray-800">{statusCounts.PENDING}</p>
+                <p className="text-sm text-gray-400">Pending Review</p>
+                <p className="text-2xl font-bold text-white mt-1">{statusCounts.PENDING}</p>
               </div>
-              <Clock className="text-yellow-500" size={24} />
+              <div className="p-3 rounded-xl bg-yellow-500/20 text-yellow-400">
+                <Clock size={24} />
+              </div>
             </div>
           </div>
           
-          <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+          <div className="bg-gray-900/40 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 hover:border-green-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Approved</p>
-                <p className="text-2xl font-bold text-gray-800">{statusCounts.APPROVED}</p>
+                <p className="text-sm text-gray-400">Approved</p>
+                <p className="text-2xl font-bold text-white mt-1">{statusCounts.APPROVED}</p>
               </div>
-              <CheckCircle className="text-green-500" size={24} />
+              <div className="p-3 rounded-xl bg-green-500/20 text-green-400">
+                <CheckCircle size={24} />
+              </div>
             </div>
           </div>
           
-          <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+          <div className="bg-gray-900/40 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 hover:border-red-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Rejected</p>
-                <p className="text-2xl font-bold text-gray-800">{statusCounts.REJECTED}</p>
+                <p className="text-sm text-gray-400">Rejected</p>
+                <p className="text-2xl font-bold text-white mt-1">{statusCounts.REJECTED}</p>
               </div>
-              <UserX className="text-red-500" size={24} />
+              <div className="p-3 rounded-xl bg-red-500/20 text-red-400">
+                <UserX size={24} />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+        {/* Filters Card */}
+        <div className="bg-gray-900/40 backdrop-blur-sm rounded-2xl border border-gray-800 p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <input
                   type="text"
                   placeholder="Search by name or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:ring-2 focus:ring-amber-500/50 focus:border-transparent text-white placeholder-gray-400"
                 />
               </div>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {["ALL", "PENDING", "APPROVED", "REJECTED"].map((status) => (
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
+                  className={`px-4 py-2 rounded-xl transition-all duration-300 ${
                     statusFilter === status
-                      ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg"
+                      : "bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700"
                   }`}
                 >
                   {status}
@@ -247,7 +261,8 @@ export default function SuperAdminDashboard() {
             </div>
           </div>
           
-          <div className="mt-4 text-sm text-gray-500">
+          <div className="mt-4 text-sm text-gray-400 flex items-center gap-2">
+            <FileCheck size={16} />
             Showing {filteredAdmins.length} of {admins.length} applications
           </div>
         </div>
@@ -255,12 +270,12 @@ export default function SuperAdminDashboard() {
         {/* Admins List */}
         <div className="space-y-4">
           {filteredAdmins.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-              <UserX className="mx-auto text-gray-300 mb-4" size={48} />
-              <h3 className="text-lg font-semibold text-gray-700">No applications found</h3>
-              <p className="text-gray-500 mt-1">
+            <div className="bg-gray-900/40 backdrop-blur-sm rounded-2xl border border-gray-800 p-12 text-center">
+              <AlertCircle className="mx-auto text-gray-500 mb-4" size={48} />
+              <h3 className="text-lg font-semibold text-gray-300">No applications found</h3>
+              <p className="text-gray-500 mt-2">
                 {searchTerm || statusFilter !== "ALL"
-                  ? "Try adjusting your search or filter"
+                  ? "Try adjusting your search or filter criteria"
                   : "No admin applications to display"}
               </p>
             </div>
@@ -268,71 +283,70 @@ export default function SuperAdminDashboard() {
             filteredAdmins.map((admin) => (
               <div
                 key={admin._id}
-                className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200 hover:shadow-md transition-shadow"
+                className="bg-gray-900/40 backdrop-blur-sm rounded-2xl border border-gray-800 overflow-hidden hover:border-amber-500/30 transition-all duration-300 group"
               >
                 {/* Admin Summary */}
                 <div className="p-6">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div className="flex items-start gap-4">
-                      <div className="bg-indigo-100 p-3 rounded-lg">
-                        <Building className="text-indigo-600" size={24} />
+                      <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-600/20">
+                        <Building className="text-amber-400" size={24} />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-semibold text-gray-800">{admin.name}</h3>
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-3 mb-2">
+                          <h3 className="text-lg font-semibold text-white">{admin.name}</h3>
                           <span
-                            className={`px-3 py-1 rounded-full text-xs font-semibold
-                              ${
-                                admin.approvalStatus === "APPROVED"
-                                  ? "bg-green-100 text-green-700 border border-green-200"
-                                  : admin.approvalStatus === "REJECTED"
-                                  ? "bg-red-100 text-red-700 border border-red-200"
-                                  : "bg-yellow-100 text-yellow-700 border border-yellow-200"
-                              }`}
+                            className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                              admin.approvalStatus === "APPROVED"
+                                ? "bg-green-500/10 text-green-300 border-green-500/30"
+                                : admin.approvalStatus === "REJECTED"
+                                ? "bg-red-500/10 text-red-300 border-red-500/30"
+                                : "bg-yellow-500/10 text-yellow-300 border-yellow-500/30"
+                            }`}
                           >
                             {admin.approvalStatus || "PENDING"}
                           </span>
                         </div>
-                        <p className="text-gray-600 mt-1">{admin.email}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                          <div className="flex items-center gap-1">
+                        <p className="text-gray-300">{admin.email}</p>
+                        <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-400">
+                          <div className="flex items-center gap-2">
                             <Calendar size={14} />
                             Applied: {formatDate(admin.createdAt)}
                           </div>
                           {admin.managedHostelId && (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2">
                               <Building size={14} />
-                              Hostel ID: {admin.managedHostelId.substring(0, 8)}...
+                              Hostel: {admin.managedHostelId.substring(0, 8)}...
                             </div>
                           )}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-3">
                       {admin.approvalStatus !== "APPROVED" && (
                         <>
                           <button
                             onClick={() => approveAdmin(admin._id)}
                             disabled={actionLoading === `approve-${admin._id}`}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 group"
                           >
                             {actionLoading === `approve-${admin._id}` ? (
                               <Loader2 size={16} className="animate-spin" />
                             ) : (
-                              <CheckCircle size={16} />
+                              <CheckSquare size={16} />
                             )}
                             Approve
                           </button>
                           <button
                             onClick={() => rejectAdmin(admin._id)}
                             disabled={actionLoading === `reject-${admin._id}`}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="px-4 py-2 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl hover:from-red-700 hover:to-rose-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 group"
                           >
                             {actionLoading === `reject-${admin._id}` ? (
                               <Loader2 size={16} className="animate-spin" />
                             ) : (
-                              <XCircle size={16} />
+                              <XSquare size={16} />
                             )}
                             Reject
                           </button>
@@ -343,7 +357,7 @@ export default function SuperAdminDashboard() {
                         <button
                           onClick={() => deleteAdmin(admin._id)}
                           disabled={actionLoading === `delete-${admin._id}`}
-                          className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          className="px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-xl hover:from-gray-800 hover:to-gray-900 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 group"
                         >
                           {actionLoading === `delete-${admin._id}` ? (
                             <Loader2 size={16} className="animate-spin" />
@@ -356,12 +370,12 @@ export default function SuperAdminDashboard() {
                       
                       <button
                         onClick={() => setExpandedAdmin(expandedAdmin === admin._id ? null : admin._id)}
-                        className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-3 bg-gray-800/50 hover:bg-gray-700/50 rounded-xl transition-all duration-300 group"
                       >
                         {expandedAdmin === admin._id ? (
-                          <ChevronUp size={20} />
+                          <ChevronUp size={20} className="text-gray-300 group-hover:text-white" />
                         ) : (
-                          <ChevronDown size={20} />
+                          <ChevronDown size={20} className="text-gray-300 group-hover:text-white" />
                         )}
                       </button>
                     </div>
@@ -370,49 +384,52 @@ export default function SuperAdminDashboard() {
 
                 {/* Expanded Details */}
                 {expandedAdmin === admin._id && (
-                  <div className="border-t border-gray-200 p-6 bg-gray-50">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="border-t border-gray-800 p-6 bg-gradient-to-r from-gray-900/30 to-gray-800/10">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                       {/* Documents Section */}
                       <div>
-                        <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                          <FileText size={18} />
-                          Verification Documents
-                        </h4>
+                        <div className="flex items-center gap-2 mb-4">
+                          <FileText size={20} className="text-amber-400" />
+                          <h4 className="font-semibold text-white">Verification Documents</h4>
+                        </div>
                         {admin.verificationDocuments?.length > 0 ? (
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {admin.verificationDocuments.map((doc, i) => (
                               <div
                                 key={i}
-                                className="relative group bg-white rounded-lg border border-gray-300 overflow-hidden hover:shadow-md transition-shadow"
+                                className="relative group bg-gray-800/50 rounded-xl border border-gray-700 overflow-hidden hover:border-amber-500/50 transition-all duration-300"
                               >
-                                <img
-                                  src={doc.url}
-                                  alt={`Document ${i + 1}`}
-                                  className="w-full h-32 object-cover"
-                                  onError={(e) => {
-                                    e.target.src = "https://via.placeholder.com/150?text=Document";
-                                  }}
-                                />
-                                <div className="p-2">
-                                  <p className="text-xs text-gray-600 truncate">
-                                    {doc.type || "Document"}
+                                <div className="relative h-40 overflow-hidden">
+                                  <img
+                                    src={doc.url}
+                                    alt={`Document ${i + 1}`}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    onError={(e) => {
+                                      e.target.src = "https://via.placeholder.com/400x200/1a1a1a/666666?text=Document";
+                                    }}
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                </div>
+                                <div className="p-4">
+                                  <p className="text-sm text-gray-300 font-medium mb-2">
+                                    {doc.type || "Verification Document"}
                                   </p>
-                                  <div className="flex justify-between items-center mt-1">
+                                  <div className="flex justify-between items-center">
                                     <a
                                       href={doc.url}
                                       target="_blank"
                                       rel="noreferrer"
-                                      className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                                      className="text-sm text-amber-400 hover:text-amber-300 flex items-center gap-2 group/view"
                                     >
-                                      <Eye size={12} />
-                                      View
+                                      <Eye size={14} />
+                                      View Full
                                     </a>
                                     <a
                                       href={doc.url}
                                       download
-                                      className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1"
+                                      className="text-sm text-gray-400 hover:text-white flex items-center gap-2 group/download"
                                     >
-                                      <Download size={12} />
+                                      <Download size={14} />
                                       Download
                                     </a>
                                   </div>
@@ -421,37 +438,41 @@ export default function SuperAdminDashboard() {
                             ))}
                           </div>
                         ) : (
-                          <div className="text-gray-400 italic">No documents uploaded</div>
+                          <div className="text-center py-8 text-gray-500 bg-gray-800/30 rounded-xl">
+                            No verification documents uploaded
+                          </div>
                         )}
                       </div>
 
                       {/* Admin Details */}
                       <div>
-                        <h4 className="font-semibold text-gray-700 mb-3">Admin Details</h4>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Verification Status:</span>
-                            <span className={`font-medium ${
-                              admin.isVerified ? "text-green-600" : "text-red-600"
+                        <h4 className="font-semibold text-white mb-4">Admin Details</h4>
+                        <div className="space-y-4 bg-gray-800/30 rounded-xl p-6">
+                          <div className="flex justify-between items-center pb-3 border-b border-gray-700">
+                            <span className="text-gray-400">Verification Status</span>
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              admin.isVerified 
+                                ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                                : "bg-red-500/20 text-red-300 border border-red-500/30"
                             }`}>
                               {admin.isVerified ? "Verified" : "Not Verified"}
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Managed Hostel ID:</span>
-                            <span className="font-medium text-gray-800">
+                          <div className="flex justify-between items-center pb-3 border-b border-gray-700">
+                            <span className="text-gray-400">Managed Hostel ID</span>
+                            <span className="font-medium text-white font-mono">
                               {admin.managedHostelId || "Not assigned"}
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Created:</span>
-                            <span className="font-medium text-gray-800">
+                          <div className="flex justify-between items-center pb-3 border-b border-gray-700">
+                            <span className="text-gray-400">Account Created</span>
+                            <span className="font-medium text-white">
                               {formatDate(admin.createdAt)}
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Last Updated:</span>
-                            <span className="font-medium text-gray-800">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-400">Last Updated</span>
+                            <span className="font-medium text-white">
                               {formatDate(admin.updatedAt)}
                             </span>
                           </div>
@@ -466,9 +487,10 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Footer Info */}
-        <div className="mt-8 text-center text-sm text-gray-500">
+        <div className="mt-8 text-center text-sm text-gray-400 space-y-1">
           <p>• Click on any row to expand and view detailed information</p>
-          <p className="mt-1">• Documents can be viewed or downloaded individually</p>
+          <p>• Documents can be viewed or downloaded individually</p>
+          <p className="mt-4 text-xs text-gray-500">Super Admin Dashboard • {new Date().getFullYear()}</p>
         </div>
       </div>
     </div>

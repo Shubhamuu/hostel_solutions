@@ -281,78 +281,96 @@ export default function StudentDashboard() {
             </button>
 
             {/* Notifications */}
-            <div className="relative">
+           {/*  <div className="relative">
               <button className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow hover:shadow-md transition-shadow relative">
                 <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                 {notifications.filter(n => !n.read).length > 0 && (
                   <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                 )}
               </button>
-            </div>
+            </div> */}
 
             {/* User Profile */}
-            <div className="relative">
-              <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow hover:shadow-lg"
-              >
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4" />
-                </div>
-                <span className="hidden md:inline">{user.name.split(' ')[0]}</span>
-                <ChevronRight className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-90' : ''}`} />
-              </button>
+           {/* User Profile */}
+<div className="relative">
+  <button
+    onClick={() => setDropdownOpen(!dropdownOpen)}
+    className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-md hover:from-indigo-700 hover:to-purple-700 transition shadow"
+  >
+    <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center">
+      <User className="w-3.5 h-3.5" />
+    </div>
+    <span className="hidden md:inline text-sm">
+      {user.name.split(" ")[0]}
+    </span>
+    <ChevronRight
+      className={`w-3.5 h-3.5 transition-transform ${
+        dropdownOpen ? "rotate-90" : ""
+      }`}
+    />
+  </button>
 
-              {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-10 overflow-hidden">
-                  <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
-                        <GraduationCap className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-800 dark:text-white">{user.name}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-300">
-                        {user.role}
-                      </span>
-                      <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        ID: {user.studentId || "N/A"}
-                      </span>
-                    </div>
-                  </div>
+  {dropdownOpen && (
+    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-10 overflow-hidden">
+      
+      {/* Header */}
+      <div className="p-3 border-b border-gray-100 dark:border-gray-700">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+            <GraduationCap className="w-4 h-4 text-white" />
+          </div>
+          <div className="leading-tight">
+            <p className="text-sm font-semibold text-gray-800 dark:text-white">
+              {user.name}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+              {user.email}
+            </p>
+          </div>
+        </div>
 
-                  <div className="p-2">
-                    <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3">
-                      <Settings className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                      <span className="text-gray-700 dark:text-gray-200">Settings</span>
-                    </button>
-                    <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3">
-                      <HelpCircle className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                      <span className="text-gray-700 dark:text-gray-200">Help & Support</span>
-                    </button>
-                    <button className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3">
-                      <Shield className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                      <span className="text-gray-700 dark:text-gray-200">Privacy & Security</span>
-                    </button>
-                  </div>
+        <div className="flex justify-between items-center text-xs mt-2">
+          <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-300">
+            {user.role}
+          </span>
+          <span className="flex items-center gap-1 text-gray-400">
+            <Clock className="w-3 h-3" />
+            {user.studentId || "N/A"}
+          </span>
+        </div>
+      </div>
 
-                  <div className="border-t border-gray-100 dark:border-gray-700 p-2">
-                    <button
-                      onClick={logout}
-                      className="w-full text-left px-4 py-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors flex items-center gap-3"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Logout
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+      {/* Actions */}
+      <div className="p-1">
+        {[
+          { icon: Settings, label: "Settings" },
+          { icon: HelpCircle, label: "Help" },
+          { icon: Shield, label: "Privacy" },
+        ].map(({ icon: Icon, label }) => (
+          <button
+            key={label}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+          >
+            <Icon className="w-4 h-4 text-gray-500" />
+            <span className="text-gray-700 dark:text-gray-200">{label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Logout */}
+      <div className="border-t border-gray-100 dark:border-gray-700 p-1">
+        <button
+          onClick={logout}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </button>
+      </div>
+    </div>
+  )}
+</div>
+
           </div>
         </div>
 

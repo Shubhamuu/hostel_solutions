@@ -25,9 +25,10 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0D10] text-white">
-      <NavBar />
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)]">
 
+      <NavBar />
+    <script src="//code.tidio.co/v48oxed6ug5xdug19dmusklelvg9zuca.js" async></script>
       {/* HERO */}
       <header className="py-24 text-center px-6">
         <h1 className="text-5xl md:text-6xl font-extrabold mb-6">
