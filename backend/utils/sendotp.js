@@ -55,6 +55,29 @@ const successRegistration = async (name, email ) => {
         console.error(`Error sending registration success email: ${error.message}`);
     }
 }
+const userRegistered = async (name, email, password) => {
+  const mailOptions = {
+    from: `"Hostel Management" <${EMAIL_USER}>`,
+    to: email,
+    subject: "Registration on Hostel Successful",
+    text: `Hello ${name || 'User'},\n\nYou have successfully registered to the hostel.\n Please proceed to login and change your password.\n\nEmail: ${email}\nPassword: ${password}\n\nThank you!`,
+  };
+
+  try {
+    const success_message = await transporter.sendMail(mailOptions);
+    console.log("Email sent:", success_message.messageId);
+    return {
+      success: true,
+      message: "Registration successful. Proceed to login.",
+    };
+  } catch (error) {
+    console.error(`Error sending registration success email: ${error.message}`);
+    return {
+      success: false,
+      message: "Registration successful, but failed to send email.",
+    };
+  }
+};
 
 module.exports = {
-    sendVerificationEmail, successRegistration, codeExpiry };
+    sendVerificationEmail, successRegistration, codeExpiry, userRegistered };

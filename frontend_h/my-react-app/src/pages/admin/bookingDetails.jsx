@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { apiprivate } from "../../services/api";
 import { Loader2, Search, Filter, Calendar, User, Mail, Home, DollarSign, CheckCircle, Clock, XCircle, ChevronDown } from "lucide-react";
-
+import AdminNavbar from "../../components/common/adminNavbar";
 export default function HostelBookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -167,6 +167,7 @@ const handleConfirmBooking = async (booking) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-gray-100 p-4 md:p-6">
+      <AdminNavbar />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">

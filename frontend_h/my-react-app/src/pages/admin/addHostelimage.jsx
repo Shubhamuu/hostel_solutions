@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { apiprivate } from '../../services/api';
+import AdminNavbar from "../../components/common/adminNavbar";
 const AddHostelImages = () => {
   const [images, setImages] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -27,7 +28,7 @@ const AddHostelImages = () => {
     try {
       setLoading(true);
       setMessage("");
-      const response = await apiprivate.post("/hostels/", formData, {
+      const response = await apiprivate.post("/hostels/addImage", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setMessage(response.data.message);
@@ -43,6 +44,7 @@ const AddHostelImages = () => {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
+      <AdminNavbar />
       <h1 className="text-2xl font-bold mb-4">Add Hostel Images</h1>
 
       <input

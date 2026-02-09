@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { apiprivate } from '../../services/api';
+import AdminNavbar from "../../components/common/adminNavbar";
 import {
   Search,
   Filter,
@@ -27,7 +28,8 @@ import {
   RefreshCw,
   UserCheck,
   UserX,
-  Loader2
+  Loader2,
+  Plus
 } from 'lucide-react';
 
 const UserDetails = () => {
@@ -336,6 +338,7 @@ const UserDetails = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black p-4 md:p-6">
+       <AdminNavbar />
       <ToastContainer 
         position="top-right" 
         autoClose={3000} 
@@ -429,6 +432,8 @@ const UserDetails = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white placeholder-gray-500"
                 />
+
+               
               </div>
             </div>
             
@@ -454,6 +459,7 @@ const UserDetails = () => {
                 <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none" size={18} />
               </div>
             </div>
+           
           </div>
         </div>
 

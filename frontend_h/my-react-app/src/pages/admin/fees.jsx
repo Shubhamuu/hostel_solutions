@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { apiprivate } from '../../services/api';
-
+import AdminNavbar from "../../components/common/adminNavbar";
 const FeeDetails = () => {
   const [fees, setFees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -346,6 +346,7 @@ const FeeDetails = () => {
 
   return (
     <div className="space-y-6">
+       <AdminNavbar />
       <ToastContainer position="top-right" autoClose={3000} />
       
       {/* Header */}

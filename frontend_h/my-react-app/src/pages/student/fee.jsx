@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { apiprivate } from "../../services/api";
 
+import StudentNavBar from "../../components/common/studentNavbar";
 export default function Fee() {
   const navigate = useNavigate();
   const [fees, setFees] = useState([]);
@@ -148,6 +149,7 @@ export default function Fee() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black p-4 md:p-6">
+       <StudentNavBar />
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">

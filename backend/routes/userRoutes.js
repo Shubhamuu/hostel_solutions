@@ -15,6 +15,7 @@ router.post("/reapply-verification",isAdmin, upload.array("verificationDocuments
 // Update profile (e.g. name, password)
 router.put("/update",isUser, userController.updateProfile);
 
+router.post("/createUserAdmin",isAdmin, userController.createUserAdmin);
 //  Delete user (optional, for admin or user)
 router.delete("/delete",isAdmin, userController.deleteAccount);
 

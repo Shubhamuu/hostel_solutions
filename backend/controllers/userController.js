@@ -6,6 +6,9 @@ const{verifyToken} = require('../utils/jwtauth');
 const User = require('../models/User');
 const Room = require('../models/Room');
 const Hostel = require('../models/hostel');
+const Booking = require("../models/Booking");
+const Fee = require("../models/Fee");
+const userRegistred = require("../utils/sendotp");
 exports.getme = async (req, res) => {
 token = req.headers.authorization?.split(' ')[1];
 
@@ -444,3 +447,112 @@ else {
     });
   }
 };
+
+exports.createUserAdmin = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { name, email, roomId, feeAmount, password } = req.body;
+
+    // 1️⃣ Validation
+    if (!name || !email || !roomId || !feeAmount || !password) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: "name, email, roomId, feeAmount, password are required",
+      });
+    }
+
+    // 2️⃣ Check existing user
+    const existingUser = await User.findOne({ email }).session(session);
+    if (existingUser) {
+      await session.abortTransaction();
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    // 3️⃣ Find room
+    const room = await Room.findById(roomId).session(session);
+    if (!room) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    if (!room.isActive) {
+      await session.abortTransaction();
+      return res.status(400).json({ message: "Room is inactive" });
+    }
+
+    if (room.currentOccupancy >= room.maxCapacity) {
+      await session.abortTransaction();
+      return res.status(400).json({ message: "Room is full" });
+    }
+
+    // 4️⃣ Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // 5️⃣ Create user
+    const [user] = await User.create(
+      [
+        {
+          name,
+          email,
+          passwordHash,
+          role: "STUDENT",
+          roomId: room._id,
+          roomNumber: room.roomNumber,
+          hostelId: room.hostelId,
+          moveInDate: new Date(),
+        },
+      ],
+      { session }
+    );
+
+
+  
+
+    // 7️⃣ Create & pay fee
+    const [fee] = await Fee.create(
+      [
+        {
+          studentId: user._id,
+          hostelId: room.hostelId,
+          amountDue: feeAmount,
+          amountPaid: feeAmount,
+          amount: feeAmount,
+          status: "PAID",
+          dueDate: new Date(),        // admin-paid immediately
+          paidAt: new Date(),
+          paymentReference: ["ADMIN"],
+          KhaltipaymentStatus: "PAID",
+        },
+      ],
+      { session }
+    );
+
+    // 8️⃣ Update room occupancy ONLY
+    room.currentOccupancy += 1;
+    await room.save({ session });
+
+    // 9️⃣ Commit transaction
+      await userRegistred.userRegistered(name, email, password);
+    await session.commitTransaction();
+   
+    session.endSession();
+
+    return res.status(201).json({
+      message: "Student created and assigned successfully",
+      user,
+      fee,
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error("Create user admin error:", err);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: err.message,
+    });
+  }
+};
+

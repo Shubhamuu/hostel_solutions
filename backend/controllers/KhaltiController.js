@@ -142,7 +142,7 @@ exports.verifyKhaltiFeePayment = async (req, res) => {
       fee.amountPaid + amountPaid,
       fee.amountDue
     );
-
+    fee.paymentReference="khalti";
     fee.status = fee.amountPaid >= fee.amountDue ? "PAID" : "PARTIAL";
     fee.KhaltipaymentStatus = "PAID";
     fee.paidAt = new Date();

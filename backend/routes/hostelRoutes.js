@@ -5,5 +5,9 @@ const upload = require('../middleware/upload');
 const { isAdmin, isUser } = require('../middleware/authmiddleware');
 
 router.get('/', hostelController.getAllHostelsForStudent);
-router.post('/', isAdmin, upload.array('images', 5), hostelController.addHostelImages);
+
+router.post('/addImage', isAdmin, upload.array('images', 5), hostelController.addHostelImages);
+router.get('/getHostel',isAdmin,hostelController.getHostelDetails);
+router.put('/update',isAdmin, hostelController.updateHostelDetails);
+router.delete('/delete-image/:imageId', isAdmin, hostelController.deleteHostelImage)
 module.exports = router;

@@ -58,7 +58,7 @@ const AdminNavbar = () => {
   // Navigation items
   const navItems = [
     { label: "Dashboard", path: "/admin/dashboard", icon: Home },
-    { label: "Hostels", path: "/admin/hostels" },
+    { label: "Hostel", path: "/admin/hostelDetail" },
     { label: "Rooms", path: "/admin/rooms" },
     { label: "Bookings", path: "/admin/bookingDetails" },
     { label: "Students", path: "/admin/students" },

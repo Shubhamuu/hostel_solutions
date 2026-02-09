@@ -1,5 +1,5 @@
 
-const TempUser = require('../models/tempuser');
+
 const Hostel = require('../models/hostel');
 const getUserFromToken = require('../utils/getuserFromToken');
 const{verifyToken} = require('../utils/jwtauth');
@@ -84,6 +84,110 @@ exports.addHostelImages = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+exports.getHostelDetails = async (req, res)=> {
+try{
+ const token = verifyToken(req.headers.authorization?.split(" ")[1]);
+    const useremail = token.email;
+
+    const adminDetail =await User.findOne({email : useremail});
+ const hostelDetail = await Hostel.findOne({adminId : adminDetail._id});
+  if(!hostelDetail){
+    res.status(400).json({message:"no hostel found for admin"});
+
+  }
+   res.status(200).json({
+      success: true,
+      data: hostelDetail
+    });
+
+}  catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+}
+
+exports.updateHostelDetails = async (req, res) => {
+  try {
+    // 1. Verify token and get user email
+    const token = verifyToken(req.headers.authorization?.split(" ")[1]);
+    if (!token) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    const userEmail = token.email;
+
+    // 2. Get admin details
+    const adminDetail = await User.findOne({ email: userEmail });
+    if (!adminDetail) {
+      return res.status(404).json({ success: false, message: "Admin not found" });
+    }
+
+    // 3. Get hostel managed by this admin
+    const hostelDetail = await Hostel.findOne({ adminId: adminDetail._id });
+    if (!hostelDetail) {
+      return res.status(404).json({ success: false, message: "Hostel not found" });
+    }
+
+    // 4. Update hostel details
+    const { name, address, isActive } = req.body;
+
+    if (name) hostelDetail.name = name;
+    if (address) hostelDetail.address = address;
+    if (typeof isActive === "boolean") hostelDetail.isActive = isActive;
+
+    // 5. Save changes
+    const updatedHostel = await hostelDetail.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Hostel details updated successfully",
+      data: updatedHostel,
+    });
+
+  } catch (error) {
+    console.error("Error updating hostel:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+
+
+exports.deleteHostelImage = async (req, res) => {
+  try {
+    const token = verifyToken(req.headers.authorization?.split(" ")[1]);
+    if (!token) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const userEmail = token.email;
+    const adminDetail = await User.findOne({ email: userEmail });
+    if (!adminDetail) {
+      return res.status(404).json({ success: false, message: "Admin not found" });
+    }
+
+    const { imageId } = req.params;
+    const hostel = await Hostel.findOne({ adminId: adminDetail._id });
+    if (!hostel) {
+      return res.status(404).json({ success: false, message: "Hostel not found" });
+    }
+
+    const imageIndex = hostel.images.findIndex((img) => img._id.toString() === imageId);
+    if (imageIndex === -1) {
+      return res.status(404).json({ success: false, message: "Image not found" });
+    }
+
+    // Remove image from array
+    hostel.images.splice(imageIndex, 1);
+
+    // Save hostel
+    await hostel.save();
+
+    res.status(200).json({ success: true, message: "Image deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting image:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
 

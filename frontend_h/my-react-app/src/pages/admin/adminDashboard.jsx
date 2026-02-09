@@ -25,6 +25,7 @@ const AdminDashboard = () => {
     { to: "/admin/students", icon: "👨‍🎓", label: "View Students" },
     { to: "/admin/hostel-images", icon: "🖼️", label: "Add Hostel Images" },
     { to: "/admin/bookingDetails", icon: "🏠", label: "Booking Details" },
+    {to:"/admin/hostelDetail", icon: "🏠",label:"hostel Details" }
   ];
 
   return (

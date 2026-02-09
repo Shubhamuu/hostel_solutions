@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiprivate } from '../../services/api';
 import { Edit2, Save, X, Utensils, Loader2 } from 'lucide-react'; // Suggested icons
-
+import AdminNavbar from "../../components/common/adminNavbar";
 export default function MenuManager() {
   const [menuData, setMenuData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -68,6 +68,7 @@ export default function MenuManager() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-8">
+       <AdminNavbar />
       <header className="flex justify-between items-end border-b pb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Menu Manager</h1>

@@ -321,37 +321,55 @@ if (existingFees) throw new Error("FEE_EXISTS");
 exports.cancelBooking = async (req, res) => {
   try {
     const { bookingId } = req.body;
+
     const booking = await Booking.findById(bookingId);
     if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
     }
+
+    // ❌ Block cancellation if already confirmed
+    if (booking.status === "CONFIRMED") {
+      return res
+        .status(400)
+        .json({ message: "Cannot cancel booking after confirmation" });
+    }
+
     const room = await Room.findById(booking.roomId);
     if (!room) {
       return res.status(404).json({ message: "Room not found" });
     }
-   // room.currentOccupancy -= 1;
-   const bookingUser = await Booking.findOne({
-  studentId: booking.studentId,
-  status: "CONFIRMED"
-});
 
-if (bookingUser) {
-  console.log(bookingUser);
-  return res.status(400).json({ message: "Cannot cancel booking after confirmation" });
-}
-
-    room.booking -= 1;
+    // Safely decrement booking count
+    if (room.booking > 0) {
+      room.booking -= 1;
+    }
     await room.save();
-    await Booking.findByIdAndUpdate(bookingId, { status: "CANCELLED" });
+
+    // Update booking status
+    booking.status = "CANCELLED";
+    await booking.save();
+
+    // Remove fee record (if exists)
     await Fee.findOneAndDelete({ studentId: booking.studentId });
- 
-    await User.findByIdAndUpdate(booking.studentId, { roomId: null, roomNumber: null, moveInDate: null, bookingEndDate: null, hostelId: null });
-    return res.status(200).json({ message: "Booking cancelled successfully" });
+
+    // Reset student room info
+    await User.findByIdAndUpdate(booking.studentId, {
+      roomId: null,
+      roomNumber: null,
+      moveInDate: null,
+      bookingEndDate: null,
+      hostelId: null,
+    });
+
+    return res.status(200).json({
+      message: "Booking cancelled successfully",
+    });
   } catch (error) {
     console.error("Cancel booking error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 exports.assignRoom = async (req, res) => {
   const session = await mongoose.startSession();

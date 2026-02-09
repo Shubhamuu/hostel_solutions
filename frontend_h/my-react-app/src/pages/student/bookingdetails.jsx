@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiprivate } from "../../services/api";
+import StudentNavBar from "../../components/common/studentNavbar";
 import { 
   Loader2, 
   XCircle, 
@@ -137,6 +138,7 @@ export default function MyBooking() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black p-4 md:p-6">
+       < StudentNavBar/>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">

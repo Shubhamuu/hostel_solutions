@@ -25,7 +25,9 @@ import MyRoom from './pages/student/rooms.jsx';
 import BookingDetails from './pages/admin/bookingDetails.jsx';
 import HostelDetails from './components/common/hostels.jsx';
 import Search from './pages/search.jsx';
-import RoomDetailsById from './pages/landing/roomsById.jsx'
+import RoomDetailsById from './pages/landing/roomsById.jsx';
+import HostelDetail from "./pages/admin/hostelDetails.jsx";
+
 function App() {
 
 
@@ -57,6 +59,7 @@ function App() {
           <Route path="menu" element={<MenuManager />} />
           <Route path="hostel-images" element={<AddHostelImages />} />
           <Route path="bookingDetails" element={<BookingDetails />} />
+          <Route path="hostelDetail" element = {<HostelDetail />} />
         </Route>
       </Route>
 

@@ -92,6 +92,7 @@ exports.updateFee = async (req, res) => {
       if (amountPaid !== undefined) fee.amountPaid = amountPaid;
      //if (status) fee.status = status;
       if (paymentReference) fee.paymentReference = paymentReference;
+      fee.status="PAID";
      // if (paidAt) fee.paidAt = new Date(paidAt);
       //fee.updatedAt = updatedAt ? new Date(updatedAt) : new Date();
     }
