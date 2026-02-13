@@ -19,7 +19,7 @@ router.post('/verify-email', authController.verifyEmail);
 
 // Request password reset (send email)
 router.post('/forgot-password', authController.forgotPassword);
-
+router.post('/change-password',authController.changePassword);
 // Reset password using token or code
 router.post('/reset-password', authController.resetPassword);
 router.get('/access-token', authController.refreshToken);

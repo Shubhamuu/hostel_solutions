@@ -62,7 +62,7 @@ const NavBar = () => {
   const navItems = [
     { text: "Home", to: "/", icon: Home },
     { text: "View All Hostels", to: "/hostels", icon: Building },
-    { text: "Contact", to: "/contact", icon: Phone },
+   // { text: "Contact", to: "/contact", icon: Phone },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -126,14 +126,7 @@ const NavBar = () => {
           })}
 
           {/* THEME TOGGLE */}
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20"
-          >
-            {theme === "dark"
-              ? <Sun className="w-5 h-5 text-yellow-400" />
-              : <Moon className="w-5 h-5 text-gray-800" />}
-          </button>
+        
 
           {/* USER MENU */}
           {user ? (

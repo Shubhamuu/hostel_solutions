@@ -40,9 +40,18 @@ token = req.headers.authorization?.split(' ')[1];
     }
   try {
     const user = getUserFromToken(token);
+    const userData= await User.findById(user.id)
     res.json({
     message: 'User details fetched successfully',
-    user: userData,
+    user: {
+        id: userData._id,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        iat: user.iat,       // from decoded JWT
+        exp: user.exp,       // from decoded JWT
+        isVerified: userData.isVerified, // if you store it
+      },
   });
 
   } catch (err) {
@@ -61,7 +70,7 @@ exports.updateProfile = async (req, res) => {
   }
 
   try {
-    const { name, email, password } = req.body;
+    const { name } = req.body;
     const user = await User.findById(userData.id || userData.userId);
     
     if (!user) {
@@ -70,17 +79,8 @@ exports.updateProfile = async (req, res) => {
 
     // Update fields if provided
     if (name) user.name = name;
-    if (email) {
-      // Check if email is already taken by another user
-      const existingUser = await User.findOne({ email });
-      if (existingUser && existingUser._id.toString() !== user._id.toString()) {
-        return res.status(400).json({ message: 'Email already in use' });
-      }
-      user.email = email;
-    }
-    if (password) {
-      user.passwordHash = await bcrypt.hash(password, 10);
-    }
+ 
+
 
     user.updatedAt = new Date();
     await user.save();
@@ -556,3 +556,37 @@ exports.createUserAdmin = async (req, res) => {
   }
 };
 
+
+
+exports.updateName = async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: "Name cannot be empty" });
+    }
+
+    // Get token from headers
+    const token = req.headers.authorization?.split(" ")[1]; // Bearer <token>
+    if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+    // Decode user info from token
+    const userInfo = getUserFromToken(token);
+    if (!userInfo) return res.status(401).json({ message: "Invalid token" });
+
+    // Find user
+    const user = await User.findOne({ email: userInfo.email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Update name
+    user.name = name.trim();
+    await user.save();
+
+    res.status(200).json({
+      message: "Name updated successfully",
+      user: { id: user._id, name: user.name, email: user.email },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};

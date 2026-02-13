@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
+import StudentNavBar from "../../components/common/studentNavbar";
 import { 
   User, 
   CreditCard, 
@@ -188,12 +189,7 @@ export default function StudentDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-200">
       {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+    <StudentNavBar/>
 
       {/* Mobile Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 lg:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
@@ -236,143 +232,7 @@ export default function StudentDashboard() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-4 md:p-6">
         {/* Top Navigation */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow hover:shadow-md transition-shadow lg:hidden"
-            >
-              <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-            </button>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-                Student Portal
-              </h1>
-              <p className="text-gray-600 dark:text-gray-300 text-sm mt-1">
-                Everything you need in one place
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Search */}
-            <div className="hidden md:block relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white w-64"
-              />
-            </div>
-
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleDarkMode}
-              className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow hover:shadow-md transition-shadow"
-              aria-label="Toggle theme"
-            >
-              {darkMode ? (
-                <Sun className="w-5 h-5 text-yellow-500" />
-              ) : (
-                <Moon className="w-5 h-5 text-gray-600" />
-              )}
-            </button>
-
-            {/* Notifications */}
-           {/*  <div className="relative">
-              <button className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow hover:shadow-md transition-shadow relative">
-                <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                {notifications.filter(n => !n.read).length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                )}
-              </button>
-            </div> */}
-
-            {/* User Profile */}
-           {/* User Profile */}
-<div className="relative">
-  <button
-    onClick={() => setDropdownOpen(!dropdownOpen)}
-    className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-md hover:from-indigo-700 hover:to-purple-700 transition shadow"
-  >
-    <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center">
-      <User className="w-3.5 h-3.5" />
-    </div>
-    <span className="hidden md:inline text-sm">
-      {user.name.split(" ")[0]}
-    </span>
-    <ChevronRight
-      className={`w-3.5 h-3.5 transition-transform ${
-        dropdownOpen ? "rotate-90" : ""
-      }`}
-    />
-  </button>
-
-  {dropdownOpen && (
-    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-10 overflow-hidden">
-      
-      {/* Header */}
-      <div className="p-3 border-b border-gray-100 dark:border-gray-700">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
-            <GraduationCap className="w-4 h-4 text-white" />
-          </div>
-          <div className="leading-tight">
-            <p className="text-sm font-semibold text-gray-800 dark:text-white">
-              {user.name}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {user.email}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center text-xs mt-2">
-          <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-300">
-            {user.role}
-          </span>
-          <span className="flex items-center gap-1 text-gray-400">
-            <Clock className="w-3 h-3" />
-            {user.studentId || "N/A"}
-          </span>
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="p-1">
-        {[
-          { icon: Settings, label: "Settings" },
-          { icon: HelpCircle, label: "Help" },
-          { icon: Shield, label: "Privacy" },
-        ].map(({ icon: Icon, label }) => (
-          <button
-            key={label}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-          >
-            <Icon className="w-4 h-4 text-gray-500" />
-            <span className="text-gray-700 dark:text-gray-200">{label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Logout */}
-      <div className="border-t border-gray-100 dark:border-gray-700 p-1">
-        <button
-          onClick={logout}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
-        >
-          <LogOut className="w-4 h-4" />
-          Logout
-        </button>
-      </div>
-    </div>
-  )}
-</div>
-
-          </div>
-        </div>
+       
 
         {/* Welcome Card */}
         <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl shadow-2xl text-white p-6 md:p-8 mb-8 relative overflow-hidden">
@@ -468,27 +328,7 @@ export default function StudentDashboard() {
           
 
           {/* Quick Links */}
-          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white">
-            <h3 className="text-lg font-semibold mb-6">Quick Links</h3>
-            <div className="space-y-3">
-              <Link to="/emergency" className="flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
-                <Shield className="w-5 h-5" />
-                <span>Emergency Contacts</span>
-              </Link>
-              <Link to="/rules" className="flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
-                <BookOpen className="w-5 h-5" />
-                <span>Hostel Rules</span>
-              </Link>
-              <Link to="/feedback" className="flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
-                <MessageSquare className="w-5 h-5" />
-                <span>Give Feedback</span>
-              </Link>
-              <Link to="/updates" className="flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
-                <TrendingUp className="w-5 h-5" />
-                <span>Recent Updates</span>
-              </Link>
-            </div>
-          </div>
+          
         </div>
 
         {/* Footer */}

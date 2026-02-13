@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const { sendVerificationEmail, successRegistration, codeExpiry } = require('../utils/sendotp');
 const generateCode = require('../utils/generatecode');
 const { generateTokens, verifyRefreshToken, removeRefreshToken, generateaccessToken } = require('../utils/jwtauth');
+const getUserFromToken = require('../utils/getuserFromToken');
 
 exports.refreshToken = async (req, res) => {
   //console.log(req.headers)
@@ -245,7 +246,7 @@ exports.login = async (req, res) => {
     res.cookie("refreshToken", tokens.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",             // REQUIRED for cross-origin
+      sameSite: "lax",             
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     });
@@ -330,3 +331,40 @@ exports.logout = async (req, res) => {
   res.clearCookie("refreshToken", { path: "/" });
   return res.json({ message: "Logged out successfully" });
 }
+exports.changePassword = async (req, res) => {
+  const { newPassword, oldPassword } = req.body;
+
+  if (!newPassword || !oldPassword) {
+    return res.status(400).json({ message: "Both old and new passwords are required" });
+  }
+
+  try {
+    // Get token from headers
+    const token = req.headers.authorization?.split(" ")[1]; // Bearer <token>
+    if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+    // Decode user info from token
+    const userinfo = getUserFromToken(token);
+    if (!userinfo) return res.status(401).json({ message: "Invalid token" });
+
+    // Find user in DB
+    const dbUser = await User.findOne({ email: userinfo.email });
+    if (!dbUser) return res.status(404).json({ message: "User not found" });
+
+    // Check old password
+    const isMatch = await bcrypt.compare(oldPassword, dbUser.passwordHash);
+    if (!isMatch) return res.status(400).json({ message: "Old password is incorrect" });
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user password
+    dbUser.passwordHash = hashedPassword;
+    await dbUser.save();
+
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};

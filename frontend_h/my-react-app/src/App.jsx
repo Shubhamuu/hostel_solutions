@@ -27,6 +27,7 @@ import HostelDetails from './components/common/hostels.jsx';
 import Search from './pages/search.jsx';
 import RoomDetailsById from './pages/landing/roomsById.jsx';
 import HostelDetail from "./pages/admin/hostelDetails.jsx";
+import ProfileSection from "./pages/student/profile.jsx"
 
 function App() {
 
@@ -71,6 +72,7 @@ function App() {
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/mybooking" element={<MyBooking />} />
         <Route path="/myroom" element={<MyRoom />} />
+        <Route path="/student/profile" element={<ProfileSection />}/>
       </Route>
     </Routes >
   </>

@@ -35,7 +35,7 @@ export default function StudentNavBar() {
           {/* Logo */}
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-blue-500">
-              Hostel System
+              Student Portal
             </span>
           </div>
 

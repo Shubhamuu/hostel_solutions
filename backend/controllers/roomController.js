@@ -86,19 +86,7 @@ exports.getAllRooms = async (req, res) => {
     console.log("rooms:", rooms, userdetails);
     const baseUrl = `${req.protocol}://${req.get('host')}`;
 
-    /*const roomsWithFullImageUrls = rooms.map(room => ({
-      ...room.toObject(),
-      images: room.images.map(img => ({
-        ...img,
-        fullUrl: `${baseUrl}${img.url}`
-      }))
-    }));
-    res.json({
-  message: "Rooms fetched successfully",
-  rooms: rooms, // original raw data (optional)
-  roomsWithFullImageUrls: roomsWithFullImageUrls
-});
-*/    res.json(rooms);
+  res.json(rooms);
 
   } catch (err) {
     console.error('Error fetching rooms:', err);
@@ -350,7 +338,7 @@ exports.cancelBooking = async (req, res) => {
     await booking.save();
 
     // Remove fee record (if exists)
-    await Fee.findOneAndDelete({ studentId: booking.studentId });
+    await Fee.findOneAndDelete({ studentId: booking.studentId, status:"PENDING" });
 
     // Reset student room info
     await User.findByIdAndUpdate(booking.studentId, {

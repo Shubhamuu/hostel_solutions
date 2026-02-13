@@ -13,6 +13,10 @@ const FeeSchema = new Schema({
     type: [String],
     default: []
   },
+   bookingId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Booking'
+  },
 
   khaltiPidx: { type: String },
 KhaltipaymentStatus: { type: String, enum: ["INITIATED", "PAID"], default: "INITIATED" },

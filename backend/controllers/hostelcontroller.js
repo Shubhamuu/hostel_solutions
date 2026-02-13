@@ -35,8 +35,6 @@ exports.getAllHostelsForStudent = async (req, res) => {
           data: [] 
         });
       }
-    
-
     // 3. Return the full dataset
     res.status(200).json({
       success: true,
