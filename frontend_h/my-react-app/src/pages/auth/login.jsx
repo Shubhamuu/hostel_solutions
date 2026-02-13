@@ -10,7 +10,7 @@ import {
   Shield
 } from "lucide-react";
 import { apiprivate } from "../../services/api";
-
+import NavBar from "../../components/common/navbar";
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -146,15 +146,14 @@ export default function Login() {
 
   return (
   <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-4">
+    <NavBar/>
   <div className="w-full max-w-md">
 
     {/* Logo and Title */}
     <div className="text-center mb-8">
-      <div className="inline-flex items-center justify-center p-4 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl mb-4 shadow-lg">
-        <Home className="text-black" size={36} />
-      </div>
+      
       <h1 className="text-3xl font-bold text-amber-400">
-        Hostel Management
+         
       </h1>
       <p className="text-gray-400">
         Welcome back! Please login to continue

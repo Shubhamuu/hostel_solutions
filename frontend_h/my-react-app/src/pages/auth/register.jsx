@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { AlertCircle, CheckCircle, Loader2, Mail, Lock, User, Shield, ArrowLeft, Building2, MapPin, Upload, X, FileText, Eye, EyeOff, Info, Clipboard, ClipboardCheck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { apiprivate } from '../../services/api';
-
+import NavBar from "../../components/common/navbar";
 // Move RegularInputField OUTSIDE the component to prevent re-creation on every render
 const RegularInputField = ({ icon: Icon, error, id, ...props }) => (
   <div>
@@ -318,13 +318,9 @@ export default function Register() {
 
   return (
   <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4 transition-colors">
-  {/* Theme Toggle Button */}
-  <button
-    onClick={() => setDarkMode(!darkMode)}
-    className="absolute top-4 right-4 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white"
-    aria-label="Toggle theme"
-  >
-    {darkMode ? '🌞' : '🌙'}
+   <NavBar/>
+  <button>
+   
   </button>
 
   <div className="w-full max-w-md">

@@ -18,6 +18,71 @@ exports.getHostels = async (req, res) => {
   }
 };
 
+exports.getNearbyHostels = async (req, res) => {
+  try {
+    const { lat, lng } = req.query;
+
+    // 1️⃣ Validate inputs
+    if (!lat || !lng) {
+      return res.status(400).json({
+        success: false,
+        message: "Latitude and longitude are required",
+      });
+    }
+
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid latitude or longitude",
+      });
+    }
+
+    // 2️⃣ GeoNear aggregation
+    const nearbyHostels = await Hostel.aggregate([
+      {
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: [longitude, latitude],
+          },
+          distanceField: "distance", // returned in meters
+          maxDistance: 5000, // 5km
+          spherical: true,
+          query: { isActive: true },
+        },
+      },
+      {
+        $limit: 10,
+      },
+      {
+        $project: {
+          name: 1,
+          address: 1,
+          images: { $slice: ["$images", 1] },
+          location: 1, // Include the location field with coordinates
+          distance: { $divide: ["$distance", 1000] }, // meters → km
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      count: nearbyHostels.length,
+      data: nearbyHostels,
+    });
+
+  } catch (error) {
+    console.error("Geo search error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch nearby hostels",
+    });
+  }
+};
+
 // Controller: Get all hostels (for students)
 exports.getAllHostelsForStudent = async (req, res) => {
   try {
@@ -129,12 +194,25 @@ exports.updateHostelDetails = async (req, res) => {
     }
 
     // 4. Update hostel details
-    const { name, address, isActive } = req.body;
+    const { name, address, isActive,location } = req.body;
 
     if (name) hostelDetail.name = name;
     if (address) hostelDetail.address = address;
     if (typeof isActive === "boolean") hostelDetail.isActive = isActive;
-
+   if (
+  location &&
+  location.type === "Point" &&
+  Array.isArray(location.coordinates) &&
+  location.coordinates.length === 2
+) {
+  hostelDetail.location = {
+    type: "Point",
+    coordinates: [
+      Number(location.coordinates[0]), // lng
+      Number(location.coordinates[1]), // lat
+    ],
+  };
+}
     // 5. Save changes
     const updatedHostel = await hostelDetail.save();
 

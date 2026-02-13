@@ -4,7 +4,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { apiprivate } from "../../services/api";
 import AdminNavbar from "../../components/common/adminNavbar";
-
+import HostelLocation from"./updateHostelLocation";
 const HostelDetail = () => {
   const [hostel, setHostel] = useState(null);
   const [originalHostel, setOriginalHostel] = useState(null);
@@ -334,6 +334,7 @@ const HostelDetail = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0B0D10] via-[#0F1115] to-[#0B0D10] text-white">
       <AdminNavbar />
+
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -356,6 +357,7 @@ const HostelDetail = () => {
               <h1 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-500 mb-2">
                 Edit your hostel Details
               </h1>
+              <HostelLocation/>
               <p className="text-gray-400">Manage your hostel information and gallery</p>
             </div>
             {hasUnsavedChanges && (

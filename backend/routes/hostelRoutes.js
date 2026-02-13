@@ -9,5 +9,6 @@ router.get('/', hostelController.getAllHostelsForStudent);
 router.post('/addImage', isAdmin, upload.array('images', 5), hostelController.addHostelImages);
 router.get('/getHostel',isAdmin,hostelController.getHostelDetails);
 router.put('/update',isAdmin, hostelController.updateHostelDetails);
+router.get("/nearby", hostelController.getNearbyHostels)
 router.delete('/delete-image/:imageId', isAdmin, hostelController.deleteHostelImage)
 module.exports = router;
