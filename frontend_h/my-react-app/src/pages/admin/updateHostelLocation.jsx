@@ -1,3 +1,4 @@
+// components/UpdateHostelMap.jsx
 import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
@@ -6,7 +7,9 @@ import { apiprivate } from "../../services/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// Fix Leaflet marker icon issue
+/* =========================
+   FIX LEAFLET ICON ISSUE
+========================= */
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -17,39 +20,66 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-export default function HostelLocation() {
+export default function UpdateHostelMap() {
+  const [name, setName] = useState("");
   const [location, setLocation] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  /* ============================
-     1️⃣ GET USER CURRENT LOCATION
-     ============================ */
+  /* =========================
+     FETCH HOSTEL
+  ========================= */
   useEffect(() => {
+    const fetchHostel = async () => {
+      try {
+        const res = await apiprivate.get("/hostels/getHostel");
+        const hostel = res.data?.data;
+
+        setName(hostel.name || "");
+
+        if (
+          hostel?.location?.coordinates &&
+          hostel.location.coordinates.length === 2
+        ) {
+          setLocation(hostel.location);
+        } else {
+          getCurrentLocation();
+        }
+      } catch {
+        toast.error("Failed to load hostel");
+        getCurrentLocation();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHostel();
+  }, []);
+
+  /* =========================
+     GPS FALLBACK
+  ========================= */
+  const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       toast.error("Geolocation not supported");
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      (pos) => {
         setLocation({
           type: "Point",
-          coordinates: [
-            position.coords.longitude,
-            position.coords.latitude,
-          ],
+          coordinates: [pos.coords.longitude, pos.coords.latitude],
         });
       },
-      () => {
-        toast.error("Location access denied. Enable GPS.");
-      },
+      () => toast.error("Location access denied"),
       { enableHighAccuracy: true }
     );
-  }, []);
+  };
 
-  /* ============================
-     2️⃣ MAP CLICK HANDLER
-     ============================ */
+  /* =========================
+     MAP CLICK HANDLER
+  ========================= */
   const LocationMarker = () => {
     useMapEvents({
       click(e) {
@@ -72,57 +102,71 @@ export default function HostelLocation() {
     );
   };
 
-  /* ============================
-     3️⃣ SAVE LOCATION TO BACKEND
-     ============================ */
-  const handleSaveLocation = async () => {
-    if (!location) return toast.error("Location not selected");
+  /* =========================
+     SAVE NAME + LOCATION
+  ========================= */
+  const handleSave = async () => {
+    if (!name.trim()) {
+      return toast.error("Hostel name is required");
+    }
+
+    if (!location?.coordinates) {
+      return toast.error("Location not selected");
+    }
 
     try {
       setSaving(true);
 
       await apiprivate.put("/hostels/update", {
-        location,
+       
+        location: {
+          type: "Point",
+          coordinates: [
+            Number(location.coordinates[0]),
+            Number(location.coordinates[1]),
+          ],
+        },
       });
 
-      toast.success("Hostel location updated successfully!");
+      toast.success("Hostel updated successfully");
     } catch (err) {
-      toast.error(
-        err.response?.data?.message || "Failed to update location"
-      );
+      toast.error(err.response?.data?.message || "Update failed");
     } finally {
       setSaving(false);
     }
   };
 
-  if (!location) {
+  /* =========================
+     LOADING
+  ========================= */
+  if (loading || !location) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-950 text-gray-400">
-        Fetching your location…
+        Loading hostel…
       </div>
     );
   }
 
-  /* ============================
-     4️⃣ UI
-     ============================ */
+  /* =========================
+     UI
+  ========================= */
   return (
     <div className="min-h-screen bg-gray-950 text-white p-6">
       <ToastContainer theme="dark" />
 
-      <div className="max-w-5xl mx-auto space-y-6">
-        {/* HEADER */}
-        <div>
-          <h1 className="text-3xl font-bold text-blue-400">
-            Hostel Location
-          </h1>
-          <p className="text-gray-400">
-            We detected your current location. Click the map to adjust it.
-          </p>
-        </div>
+      <div className="max-w-4xl mx-auto space-y-6">
+
+        
 
         {/* MAP */}
-        <div className="bg-gray-900 rounded-2xl p-5 border border-gray-800 shadow-lg">
+        <div className="bg-gray-900 rounded-2xl p-5 border border-gray-800">
+          <h2 className="text-xl font-bold text-blue-400 mb-2">
+            Hostel Location
+          </h2>
+          <p className="text-gray-400 mb-4">
+            Click on the map to change location
+          </p>
+
           <div className="h-80 rounded-xl overflow-hidden border border-gray-700">
             <MapContainer
               center={[
@@ -132,14 +176,11 @@ export default function HostelLocation() {
               zoom={15}
               className="h-full w-full"
             >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               <LocationMarker />
             </MapContainer>
           </div>
 
-          {/* COORDINATES */}
           <div className="flex justify-between mt-3 text-sm text-gray-400">
             <span>
               Longitude:
@@ -156,13 +197,13 @@ export default function HostelLocation() {
           </div>
         </div>
 
-        {/* SAVE BUTTON */}
+        {/* SAVE */}
         <button
-          onClick={handleSaveLocation}
+          onClick={handleSave}
           disabled={saving}
-          className="w-full bg-blue-600 hover:bg-blue-700 transition py-3 rounded-xl font-semibold text-lg disabled:opacity-50"
+          className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-semibold text-lg disabled:opacity-50"
         >
-          {saving ? "Saving Location..." : "Save Location"}
+          {saving ? "Saving..." : "Save Changes"}
         </button>
       </div>
     </div>

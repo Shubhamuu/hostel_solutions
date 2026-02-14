@@ -241,7 +241,7 @@ const HostelFinder = () => {
 
               {/* Map Container with Controls */}
               <div className="relative bg-gray-800">
-                <div className={`w-full ${isMapExpanded ? 'h-[calc(100vh-180px)]' : 'h-[50vh] sm:h-[500px]'}`}>
+                <div className={`w-full ${isMapExpanded ? 'h-[50vh]' : 'h-[50vh] sm:h-[360px]'}`}>
                   {(() => {
                     const coords = getCoordinates(selectedHostel);
                     return coords.valid ? (
