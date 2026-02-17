@@ -196,7 +196,11 @@ exports.updateHostelDetails = async (req, res) => {
     // 4. Update hostel details
     const { name, address, isActive,location } = req.body;
 
-    if (name) hostelDetail.name = name;
+    if (name)
+      {
+         hostelDetail.name = name;
+         adminDetail.hostelname=name;
+      }
     if (address) hostelDetail.address = address;
     if (typeof isActive === "boolean") hostelDetail.isActive = isActive;
    if (
@@ -215,7 +219,7 @@ exports.updateHostelDetails = async (req, res) => {
 }
     // 5. Save changes
     const updatedHostel = await hostelDetail.save();
-
+  await adminDetail.save();
     res.status(200).json({
       success: true,
       message: "Hostel details updated successfully",

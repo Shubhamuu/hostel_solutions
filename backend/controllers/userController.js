@@ -124,7 +124,7 @@ exports.deleteAccount = async (req, res) => {
 
 // // Get all users (admin only)
 // router.get("/", authenticateToken, userController.getAllUsers);
-exports.getAllUsers = async (req, res) => {
+exports.getAllHostelUsers = async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
 
   try {
@@ -150,6 +150,14 @@ exports.getFeesDetails = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 }
+exports.getAllUsers= async(req, res)=>{
+  try{
+ const users = await User.find({}, '-passwordHash -createdAt -updatedAt -emailVerificationCode');
+  res.status(200).json(users);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+}  
 
 // Get student's room with roommates
 exports.getMyRoom = async (req, res) => {

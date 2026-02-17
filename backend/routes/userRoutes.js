@@ -20,8 +20,8 @@ router.post("/createUserAdmin",isAdmin, userController.createUserAdmin);
 router.delete("/delete",isAdmin, userController.deleteAccount);
 
 // Get all users (admin only)
-router.get("/",isAdmin, userController.getAllUsers);
-
+router.get("/",isAdmin, userController.getAllHostelUsers);
+router.get("/allUser",isSuperAdmin, userController.getAllUsers);
 // verify user email
 router.post("/verify-user", userController.verifyuserEmail);
 

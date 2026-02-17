@@ -28,7 +28,7 @@ import Search from './pages/search.jsx';
 import RoomDetailsById from './pages/landing/roomsById.jsx';
 import HostelDetail from "./pages/admin/hostelDetails.jsx";
 import ProfileSection from "./pages/student/profile.jsx"
-
+import AllUsersCard from "./pages/superadmin/allUser.jsx"
 function App() {
 
 
@@ -47,6 +47,7 @@ function App() {
       <Route element={<ProtectedRoute allowedRoles={['SUPERADMIN']} />}>
         <Route path='/superadmin' element={<Outlet />} >
           <Route path='dashboard' element={<SuperAdminDashboard />} />
+          <Route path='alluser' element={<AllUsersCard />}/>
         </Route>
       </Route>
 

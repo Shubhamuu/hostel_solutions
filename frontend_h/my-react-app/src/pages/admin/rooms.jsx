@@ -1,15 +1,19 @@
+// components/RoomDetails.js
 import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { apiprivate } from "../../services/api";
 import AdminNavbar from "../../components/common/adminNavbar";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus, X, Loader2, Edit, Trash2, Users, Home, DollarSign, BedDouble } from "lucide-react";
+
 const RoomDetails = () => {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
 
   const [newRoom, setNewRoom] = useState({
     roomNumber: "",
@@ -17,17 +21,13 @@ const RoomDetails = () => {
     price: "",
     maxCapacity: "",
     description: "",
-    images: [],
   });
 
-  const [imagePreviews, setImagePreviews] = useState([]);
   const [imageFiles, setImageFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
-
-  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+  
   const [selectedRoomForStudent, setSelectedRoomForStudent] = useState(null);
-
   const [studentForm, setStudentForm] = useState({
     name: "",
     email: "",
@@ -35,15 +35,24 @@ const RoomDetails = () => {
     feeAmount: "",
   });
 
-  // Fetch rooms
+  const [editRoom, setEditRoom] = useState(null);
+  const [editImages, setEditImages] = useState([]);
+  const [updating, setUpdating] = useState(false);
+
+  // Filter states
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [priceRange, setPriceRange] = useState({ min: "", max: "" });
+  const [sortBy, setSortBy] = useState("roomNumber");
+  const [sortOrder, setSortOrder] = useState("asc");
+
+  // ================= FETCH ROOMS =================
   const fetchRooms = async () => {
     try {
       setLoading(true);
-      const response = await apiprivate.get("/rooms/getallrooms");
-      setRooms(response.data);
-    } catch (error) {
-      toast.error("Failed to fetch rooms");
-      console.error(error);
+      const res = await apiprivate.get("/rooms/getallrooms");
+      setRooms(res.data);
+    } catch {
+      toast.error("Failed to load rooms");
     } finally {
       setLoading(false);
     }
@@ -53,275 +62,895 @@ const RoomDetails = () => {
     fetchRooms();
   }, []);
 
-  // Filtered rooms
-  const filteredRooms = rooms.filter((room) => {
-    if (activeTab === "available") return room.currentOccupancy < room.maxCapacity;
-    if (activeTab === "occupied") return room.currentOccupancy === room.maxCapacity;
-    return true;
-  });
-
-  // Room stats
-  const stats = (() => {
+  // ================= STATISTICS =================
+  const calculateStats = () => {
     const totalRooms = rooms.length;
-    const occupiedRooms = rooms.filter((r) => r.currentOccupancy === r.maxCapacity).length;
-    const availableRooms = rooms.filter((r) => r.currentOccupancy < r.maxCapacity).length;
+    const availableRooms = rooms.filter(r => r.currentOccupancy < r.maxCapacity).length;
+    const occupiedRooms = rooms.filter(r => r.currentOccupancy === r.maxCapacity).length;
     const totalCapacity = rooms.reduce((sum, r) => sum + r.maxCapacity, 0);
-    const totalOccupancy = rooms.reduce((sum, r) => sum + r.currentOccupancy, 0);
-    const avgOccupancyRate = totalCapacity ? ((totalOccupancy / totalCapacity) * 100).toFixed(1) : 0;
-    return { totalRooms, occupiedRooms, availableRooms, totalCapacity, totalOccupancy, avgOccupancyRate };
-  })();
+    const totalOccupied = rooms.reduce((sum, r) => sum + r.currentOccupancy, 0);
+    const occupancyRate = totalCapacity > 0 ? ((totalOccupied / totalCapacity) * 100).toFixed(1) : 0;
+    const averagePrice = rooms.length > 0 ? (rooms.reduce((sum, r) => sum + r.price, 0) / rooms.length).toFixed(0) : 0;
 
-  // Image upload
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-
-    if (files.some((f) => f.size > 1024 * 1024)) {
-      toast.error("Each image must be less than 1MB");
-      return;
-    }
-
-    if (files.length + imagePreviews.length > 5) {
-      toast.error("Maximum 5 images allowed");
-      return;
-    }
-
-    const previews = files.map((file) => ({ url: URL.createObjectURL(file), name: file.name }));
-    setImagePreviews([...imagePreviews, ...previews]);
-    setImageFiles([...imageFiles, ...files]);
+    return {
+      totalRooms,
+      availableRooms,
+      occupiedRooms,
+      totalCapacity,
+      totalOccupied,
+      occupancyRate,
+      averagePrice
+    };
   };
 
-  const removeImage = (index) => {
-    const newPreviews = [...imagePreviews];
-    const newFiles = [...imageFiles];
-    URL.revokeObjectURL(newPreviews[index].url);
-    newPreviews.splice(index, 1);
-    newFiles.splice(index, 1);
-    setImagePreviews(newPreviews);
-    setImageFiles(newFiles);
-  };
+  const stats = calculateStats();
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewRoom((prev) => ({
-      ...prev,
-      [name]: ["price", "maxCapacity"].includes(name) ? Number(value) : value,
-    }));
-  };
+  // ================= FILTER AND SORT =================
+  const filteredAndSortedRooms = rooms
+    .filter((room) => {
+      // Tab filter
+      if (activeTab === "available") return room.currentOccupancy < room.maxCapacity;
+      if (activeTab === "occupied") return room.currentOccupancy === room.maxCapacity;
+      
+      // Search filter
+      const matchesSearch = searchTerm === "" ||
+        room.roomNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        room.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (room.description && room.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  // Add room
+      // Type filter
+      const matchesType = typeFilter === "all" || room.type === typeFilter;
+
+      // Price range filter
+      const matchesPrice = 
+        (priceRange.min === "" || room.price >= Number(priceRange.min)) &&
+        (priceRange.max === "" || room.price <= Number(priceRange.max));
+
+      return matchesSearch && matchesType && matchesPrice;
+    })
+    .sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortBy) {
+        case "roomNumber":
+          aValue = a.roomNumber;
+          bValue = b.roomNumber;
+          break;
+        case "price":
+          aValue = a.price;
+          bValue = b.price;
+          break;
+        case "capacity":
+          aValue = a.maxCapacity;
+          bValue = b.maxCapacity;
+          break;
+        case "occupancy":
+          aValue = a.currentOccupancy / a.maxCapacity;
+          bValue = b.currentOccupancy / b.maxCapacity;
+          break;
+        default:
+          aValue = a.roomNumber;
+          bValue = b.roomNumber;
+      }
+
+      if (sortOrder === "asc") {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+  // ================= ADD ROOM =================
   const handleAddRoom = async () => {
     const { roomNumber, price, maxCapacity, description, type } = newRoom;
-    if (!roomNumber || !price || !maxCapacity || !description) return toast.error("Fill all fields");
+    if (!roomNumber || !price || !maxCapacity || !description)
+      return toast.error("Fill all fields");
+
     if (!imageFiles.length) return toast.error("Upload at least one image");
 
     try {
       setUploading(true);
-      const formData = new FormData();
-      formData.append("roomNumber", roomNumber);
-      formData.append("type", type);
-      formData.append("price", price);
-      formData.append("capacity", maxCapacity);
-      formData.append("description", description);
-      imageFiles.forEach((file) => formData.append("images", file));
+      const fd = new FormData();
+      fd.append("roomNumber", roomNumber);
+      fd.append("type", type);
+      fd.append("price", price);
+      fd.append("capacity", maxCapacity);
+      fd.append("description", description);
+      imageFiles.forEach((img) => fd.append("images", img));
 
-      const res = await apiprivate.post("/rooms/create", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      if (res.status === 201) {
-        toast.success("Room added successfully");
-        setShowAddModal(false);
-        resetForm();
-        fetchRooms();
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to add room");
+      await apiprivate.post("/rooms/create", fd);
+      toast.success("Room added successfully");
+      setShowAddModal(false);
+      setNewRoom({ roomNumber: "", type: "Standard", price: "", maxCapacity: "", description: "" });
+      setImageFiles([]);
+      fetchRooms();
+    } catch {
+      toast.error("Failed to add room");
     } finally {
       setUploading(false);
     }
   };
 
+  // ================= ADD STUDENT =================
   const openAddStudentModal = (room) => {
     setSelectedRoomForStudent(room);
     setStudentForm({ name: "", email: "", password: "", feeAmount: room.price });
     setShowAddStudentModal(true);
   };
 
-  const handleStudentChange = (e) => {
-    const { name, value } = e.target;
-    setStudentForm((prev) => ({ ...prev, [name]: value }));
-  };
-
   const handleAddStudent = async () => {
     const { name, email, password, feeAmount } = studentForm;
-    if (!name || !email || !password || !feeAmount) return toast.error("All fields required");
+    if (!name || !email || !password || !feeAmount)
+      return toast.error("All fields required");
 
     try {
       await apiprivate.post("/users/createUserAdmin", {
-        name,
-        email,
-        password,
-        feeAmount,
+        ...studentForm,
         roomId: selectedRoomForStudent._id,
       });
       toast.success("Student added successfully");
       setShowAddStudentModal(false);
       fetchRooms();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to add student");
+    } catch {
+      toast.error("Failed to add student");
     }
   };
 
-  const resetForm = () => {
-    setNewRoom({ roomNumber: "", type: "Standard", price: "", maxCapacity: "", description: "", images: [] });
-    setImagePreviews([]);
-    setImageFiles([]);
-    setSelectedRoom(null);
+  // ================= EDIT ROOM =================
+  const openEditModal = (room) => {
+    setEditRoom({
+      _id: room._id,
+      roomNumber: room.roomNumber,
+      description: room.description,
+      price: room.price,
+      capacity: room.maxCapacity,
+      type: room.type,
+      isActive: room.isActive ?? true,
+    });
+    setEditImages([]);
+    setShowEditModal(true);
   };
 
-  const formatCurrency = (amt) =>
-    new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 0 }).format(amt);
+  const handleUpdateRoom = async () => {
+    try {
+      setUpdating(true);
+      const fd = new FormData();
+      fd.append("description", editRoom.description);
+      fd.append("price", editRoom.price);
+      fd.append("capacity", editRoom.capacity);
+      fd.append("type", editRoom.type);
+      fd.append("isActive", editRoom.isActive);
 
-  const getRoomTypeColor = (type) => {
-    const t = type.toLowerCase();
-    if (t.includes("deluxe")) return "bg-amber-200 text-amber-800";
-    if (t.includes("ac")) return "bg-yellow-200 text-yellow-800";
-    if (t.includes("standard")) return "bg-blue-100 text-blue-800";
-    if (t.includes("suite")) return "bg-pink-100 text-pink-800";
-    return "bg-gray-100 text-gray-800";
+      editImages.forEach((img) => fd.append("images", img));
+
+      await apiprivate.put(`/rooms/updateroom/${editRoom._id}`, fd);
+      toast.success("Room updated successfully");
+      setShowEditModal(false);
+      fetchRooms();
+    } catch {
+      toast.error("Update failed");
+    } finally {
+      setUpdating(false);
+    }
   };
 
-  const getOccupancyColor = (current, max) => {
-    if (current === 0) return "bg-green-200 text-green-800";
-    if (current < max) return "bg-yellow-200 text-yellow-800";
-    if (current === max) return "bg-red-200 text-red-800";
-    return "bg-gray-100 text-gray-800";
+  // ================= DELETE ROOM =================
+  const handleDeleteRoom = async (roomId) => {
+    if (!window.confirm("Are you sure you want to delete this room?")) return;
+
+    try {
+      await apiprivate.delete(`/rooms/deleteroom/${roomId}`);
+      toast.success("Room deleted successfully");
+      fetchRooms();
+    } catch {
+      toast.error("Failed to delete room");
+    }
   };
 
+  // ================= EXPORT DATA =================
+  const handleExportRooms = () => {
+    const csvContent = [
+      ["Room Number", "Type", "Price", "Max Capacity", "Current Occupancy", "Available Beds", "Description", "Status"],
+      ...filteredAndSortedRooms.map(room => [
+        room.roomNumber,
+        room.type,
+        room.price,
+        room.maxCapacity,
+        room.currentOccupancy,
+        room.maxCapacity - room.currentOccupancy,
+        room.description || "",
+        room.currentOccupancy < room.maxCapacity ? "Available" : "Occupied"
+      ])
+    ].map(row => row.join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `rooms_export_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  // ================= FORMAT CURRENCY =================
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
+
+  // ================= GET STATUS COLOR =================
+  const getStatusColor = (room) => {
+    const occupancyRate = (room.currentOccupancy / room.maxCapacity) * 100;
+    if (occupancyRate === 0) return "bg-green-900/50 text-green-300 border border-green-700";
+    if (occupancyRate === 100) return "bg-red-900/50 text-red-300 border border-red-700";
+    return "bg-yellow-900/50 text-yellow-300 border border-yellow-700";
+  };
+
+  const getStatusText = (room) => {
+    const occupancyRate = (room.currentOccupancy / room.maxCapacity) * 100;
+    if (occupancyRate === 0) return "Available";
+    if (occupancyRate === 100) return "Occupied";
+    return `${room.currentOccupancy}/${room.maxCapacity} Occupied`;
+  };
+
+  // ================= UI =================
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gray-900">
       <AdminNavbar />
-      <ToastContainer position="top-right" autoClose={3000} />
+      <ToastContainer position="top-right" autoClose={3000} theme="dark" />
 
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800">Room Management</h1>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="px-6 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Add New Room
-        </button>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="bg-white rounded-xl shadow p-4 flex space-x-4">
-        {["all", "available", "occupied"].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg ${
-              activeTab === tab ? "bg-amber-200 text-amber-800" : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {/* Rooms Grid */}
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="animate-spin w-12 h-12 text-amber-500" />
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-white">Room Management</h1>
+          <div className="flex gap-3">
+            <button
+              onClick={handleExportRooms}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export CSV
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Add Room
+            </button>
+          </div>
         </div>
-      ) : filteredRooms.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-          <div className="text-gray-400 text-6xl mb-4">🏠</div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">No rooms found</h3>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="mt-4 px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
-          >
-            Add Your First Room
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRooms.map((room) => (
-            <div key={room._id} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
-              {/* Room Image */}
-              <div className="relative h-48 bg-gray-100 flex items-center justify-center">
-                {room.images[0] ? <img src={room.images[0].url} className="w-full h-full object-cover" /> : "🏠"}
-                <span
-                  className={`absolute top-3 left-3 px-3 py-1 text-xs rounded-full ${getRoomTypeColor(
-                    room.type
-                  )}`}
-                >
-                  {room.type}
-                </span>
-                <span
-                  className={`absolute top-3 right-3 px-3 py-1 text-xs rounded-full ${getOccupancyColor(
-                    room.currentOccupancy,
-                    room.maxCapacity
-                  )}`}
-                >
-                  {room.currentOccupancy}/{room.maxCapacity}
-                </span>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Total Rooms</p>
+                <p className="text-3xl font-bold text-white mt-2">{stats.totalRooms}</p>
               </div>
+              <Home className="w-12 h-12 text-blue-500/30" />
+            </div>
+            <div className="mt-4 flex justify-between text-sm">
+              <span className="text-gray-400">Capacity: {stats.totalCapacity}</span>
+              <span className="text-gray-400">Avg: {formatCurrency(stats.averagePrice)}</span>
+            </div>
+          </div>
 
-              {/* Details */}
-              <div className="p-4">
-                <h3 className="font-bold text-lg">Room {room.roomNumber}</h3>
-                <p className="text-gray-600 mb-2">{room.description}</p>
-                <p className="font-semibold text-amber-600">{formatCurrency(room.price)} / month</p>
+          <div className="bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Available Rooms</p>
+                <p className="text-3xl font-bold text-green-400 mt-2">{stats.availableRooms}</p>
+              </div>
+              <BedDouble className="w-12 h-12 text-green-500/30" />
+            </div>
+            <div className="mt-4 text-sm">
+              <span className="text-gray-400">{stats.totalOccupied} beds occupied</span>
+            </div>
+          </div>
 
-                <button
-                  onClick={() => openAddStudentModal(room)}
-                  disabled={room.currentOccupancy >= room.maxCapacity}
-                  className="mt-3 px-3 py-1.5 bg-yellow-400 text-white rounded-lg hover:bg-yellow-500 disabled:opacity-50"
+          <div className="bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Occupied Rooms</p>
+                <p className="text-3xl font-bold text-yellow-400 mt-2">{stats.occupiedRooms}</p>
+              </div>
+              <Users className="w-12 h-12 text-yellow-500/30" />
+            </div>
+            <div className="mt-4 text-sm">
+              <span className="text-gray-400">{stats.occupancyRate}% occupancy rate</span>
+            </div>
+          </div>
+
+          <div className="bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Average Price</p>
+                <p className="text-3xl font-bold text-purple-400 mt-2">{formatCurrency(stats.averagePrice)}</p>
+              </div>
+              <DollarSign className="w-12 h-12 text-purple-500/30" />
+            </div>
+            <div className="mt-4 text-sm">
+              <span className="text-gray-400">Per room/month</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters and Tabs */}
+        <div className="bg-gray-800 rounded-xl shadow-lg p-6">
+          {/* Tabs */}
+          <div className="flex gap-4 mb-6 border-b border-gray-700 pb-4">
+            {[
+              { id: "all", label: "All Rooms", count: rooms.length },
+              { id: "available", label: "Available", count: rooms.filter(r => r.currentOccupancy < r.maxCapacity).length },
+              { id: "occupied", label: "Occupied", count: rooms.filter(r => r.currentOccupancy === r.maxCapacity).length }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2 rounded-lg transition-colors relative ${
+                  activeTab === tab.id 
+                    ? "bg-blue-600 text-white" 
+                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                }`}
+              >
+                {tab.label}
+                <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+                  activeTab === tab.id ? "bg-blue-500" : "bg-gray-600"
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Search and Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Search Rooms
+              </label>
+              <input
+                type="text"
+                placeholder="Search by room number, type..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Room Type
+              </label>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Types</option>
+                <option value="Standard">Standard</option>
+                <option value="Deluxe">Deluxe</option>
+                <option value="AC">AC</option>
+                <option value="Suite">Suite</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Price Range
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={priceRange.min}
+                  onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                  className="w-1/2 px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+                />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={priceRange.max}
+                  onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                  className="w-1/2 px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Sort By
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  Add Student
+                  <option value="roomNumber">Room Number</option>
+                  <option value="price">Price</option>
+                  <option value="capacity">Capacity</option>
+                  <option value="occupancy">Occupancy</option>
+                </select>
+                <button
+                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                  className="px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg hover:bg-gray-600"
+                >
+                  {sortOrder === "asc" ? "↑" : "↓"}
                 </button>
               </div>
             </div>
-          ))}
+          </div>
+        </div>
+
+        {/* Rooms Grid */}
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <Loader2 className="animate-spin w-12 h-12 text-blue-500" />
+          </div>
+        ) : filteredAndSortedRooms.length === 0 ? (
+          <div className="bg-gray-800 rounded-xl p-12 text-center">
+            <div className="text-gray-600 text-6xl mb-4">🏠</div>
+            <h3 className="text-xl font-semibold text-gray-300 mb-2">No rooms found</h3>
+            <p className="text-gray-400">
+              {searchTerm || typeFilter !== "all" || priceRange.min || priceRange.max
+                ? "Try changing your filters or search terms"
+                : "No rooms available"}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredAndSortedRooms.map((room) => (
+              <div key={room._id} className="bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+                {/* Room Image */}
+                <div className="relative h-48 bg-gray-700">
+                  {room.images && room.images.length > 0 ? (
+                    <img
+                      src={room.images[0].url}
+                      alt={`Room ${room.roomNumber}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-6xl text-gray-600">
+                      🏠
+                    </div>
+                  )}
+                  
+                  {/* Image count badge */}
+                  {room.images?.length > 1 && (
+                    <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                      {room.images.length} photos
+                    </span>
+                  )}
+
+                  {/* Status Badge */}
+                  <span className={`absolute top-2 right-2 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(room)}`}>
+                    {getStatusText(room)}
+                  </span>
+                </div>
+
+                {/* Room Details */}
+                <div className="p-5">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Room {room.roomNumber}</h3>
+                      <p className="text-sm text-gray-400">{room.type}</p>
+                    </div>
+                    <p className="text-2xl font-bold text-amber-400">{formatCurrency(room.price)}</p>
+                  </div>
+
+                  <p className="text-gray-300 text-sm mb-4 line-clamp-2">{room.description}</p>
+
+                  {/* Occupancy Bar */}
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm text-gray-400 mb-1">
+                      <span>Occupancy</span>
+                      <span>{room.currentOccupancy}/{room.maxCapacity}</span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="h-2 rounded-full bg-blue-500"
+                        style={{ width: `${(room.currentOccupancy / room.maxCapacity) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={() => openAddStudentModal(room)}
+                      disabled={room.currentOccupancy >= room.maxCapacity}
+                      className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center justify-center gap-1"
+                    >
+                      <Users className="w-4 h-4" />
+                      Add Student
+                    </button>
+                    
+                    <button
+                      onClick={() => openEditModal(room)}
+                      className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+                    
+                   
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ADD ROOM MODAL */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl shadow-2xl max-w-md w-full border border-gray-700">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-white">Add New Room</h2>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="text-gray-400 hover:text-gray-300 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Room Number *
+                  </label>
+                  <input
+                    type="text"
+                    value={newRoom.roomNumber}
+                    onChange={(e) => setNewRoom({ ...newRoom, roomNumber: e.target.value })}
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., 3-101"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Room Type *
+                  </label>
+                  <select
+                    value={newRoom.type}
+                    onChange={(e) => setNewRoom({ ...newRoom, type: e.target.value })}
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Standard">Standard</option>
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="AC">AC</option>
+                    <option value="Suite">Suite</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Price (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      value={newRoom.price}
+                      onChange={(e) => setNewRoom({ ...newRoom, price: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Amount"
+                      min="0"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Max Capacity *
+                    </label>
+                    <input
+                      type="number"
+                      value={newRoom.maxCapacity}
+                      onChange={(e) => setNewRoom({ ...newRoom, maxCapacity: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Capacity"
+                      min="1"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Description *
+                  </label>
+                  <textarea
+                    value={newRoom.description}
+                    onChange={(e) => setNewRoom({ ...newRoom, description: e.target.value })}
+                    rows="3"
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Describe the room features..."
+                    required
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Room Images *
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => setImageFiles([...e.target.files])}
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    {imageFiles.length} file(s) selected
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-gray-700">
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => setShowAddModal(false)}
+                      className="px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddRoom}
+                      disabled={uploading}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {uploading ? "Adding..." : "Add Room"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Add Student Modal */}
+      {/* EDIT ROOM MODAL */}
+      {showEditModal && editRoom && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl shadow-2xl max-w-md w-full border border-gray-700">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-white">Edit Room {editRoom.roomNumber}</h2>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="text-gray-400 hover:text-gray-300 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={editRoom.description}
+                    onChange={(e) => setEditRoom({ ...editRoom, description: e.target.value })}
+                    rows="3"
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  ></textarea>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Price (₹)
+                    </label>
+                    <input
+                      type="number"
+                      value={editRoom.price}
+                      onChange={(e) => setEditRoom({ ...editRoom, price: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Capacity
+                    </label>
+                    <input
+                      type="number"
+                      value={editRoom.capacity}
+                      onChange={(e) => setEditRoom({ ...editRoom, capacity: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Room Type
+                  </label>
+                  <select
+                    value={editRoom.type}
+                    onChange={(e) => setEditRoom({ ...editRoom, type: e.target.value })}
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Standard">Standard</option>
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="AC">AC</option>
+                    <option value="Suite">Suite</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isActive"
+                    checked={editRoom.isActive}
+                    onChange={(e) => setEditRoom({ ...editRoom, isActive: e.target.checked })}
+                    className="w-4 h-4 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="isActive" className="text-sm text-gray-300">
+                    Room is active (available for booking)
+                  </label>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Add New Images (Optional)
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => setEditImages([...e.target.files])}
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-gray-700">
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => setShowEditModal(false)}
+                      className="px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleUpdateRoom}
+                      disabled={updating}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {updating ? "Updating..." : "Update Room"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD STUDENT MODAL */}
       {showAddStudentModal && selectedRoomForStudent && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Add Student to Room {selectedRoomForStudent.roomNumber}</h2>
-              <button onClick={() => setShowAddStudentModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">
-                <X />
-              </button>
-            </div>
-            <div className="space-y-4">
-              {["name", "email", "password", "feeAmount"].map((field) => (
-                <input
-                  key={field}
-                  type={field === "email" ? "email" : field === "password" ? "password" : "text"}
-                  name={field}
-                  placeholder={field === "feeAmount" ? "Fee Amount" : field.charAt(0).toUpperCase() + field.slice(1)}
-                  value={studentForm[field]}
-                  onChange={handleStudentChange}
-                  className="w-full px-4 py-2 border rounded-lg"
-                />
-              ))}
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setShowAddStudentModal(false)} className="px-4 py-2 border rounded-lg">
-                Cancel
-              </button>
-              <button
-                onClick={handleAddStudent}
-                className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
-              >
-                Add Student
-              </button>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl shadow-2xl max-w-md w-full border border-gray-700">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-white">
+                  Add Student to Room {selectedRoomForStudent.roomNumber}
+                </h2>
+                <button
+                  onClick={() => setShowAddStudentModal(false)}
+                  className="text-gray-400 hover:text-gray-300 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="bg-gray-700 p-4 rounded-lg mb-4 border border-gray-600">
+                <h3 className="font-medium text-blue-300 mb-2">Room Details</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="text-blue-300">Room Number:</div>
+                  <div className="text-white">{selectedRoomForStudent.roomNumber}</div>
+                  
+                  <div className="text-blue-300">Type:</div>
+                  <div className="text-white">{selectedRoomForStudent.type}</div>
+                  
+                  <div className="text-blue-300">Price:</div>
+                  <div className="text-white">{formatCurrency(selectedRoomForStudent.price)}</div>
+                  
+                  <div className="text-blue-300">Available Beds:</div>
+                  <div className="text-green-400">
+                    {selectedRoomForStudent.maxCapacity - selectedRoomForStudent.currentOccupancy}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Student Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={studentForm.name}
+                    onChange={(e) => setStudentForm({ ...studentForm, name: e.target.value })}
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter student name"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={studentForm.email}
+                    onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })}
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="student@example.com"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Password *
+                  </label>
+                  <input
+                    type="password"
+                    value={studentForm.password}
+                    onChange={(e) => setStudentForm({ ...studentForm, password: e.target.value })}
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter password"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Fee Amount (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    value={studentForm.feeAmount}
+                    onChange={(e) => setStudentForm({ ...studentForm, feeAmount: e.target.value })}
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter fee amount"
+                    min="0"
+                    required
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-gray-700">
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => setShowAddStudentModal(false)}
+                      className="px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddStudent}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    >
+                      Add Student
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

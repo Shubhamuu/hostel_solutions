@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { apiprivate } from "../../services/api";
+import SuperAdminSimpleNavbar from "./navbar";
 import {
   CheckCircle,
   XCircle,
@@ -153,6 +154,7 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0B0D10] via-[#111827] to-[#0B0D10] px-4 py-8 sm:px-6 lg:px-8 text-white">
+     <SuperAdminSimpleNavbar />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">

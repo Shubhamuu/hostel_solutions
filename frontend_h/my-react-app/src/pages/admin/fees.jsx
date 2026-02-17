@@ -4,6 +4,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { apiprivate } from '../../services/api';
 import AdminNavbar from "../../components/common/adminNavbar";
+
 const FeeDetails = () => {
   const [fees, setFees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -186,11 +187,11 @@ const FeeDetails = () => {
   // Get status color
   const getStatusColor = (status) => {
     switch (status) {
-      case 'PAID': return 'bg-green-100 text-green-800';
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
-      case 'OVERDUE': return 'bg-red-100 text-red-800';
-      case 'PARTIAL': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'PAID': return 'bg-green-900/50 text-green-300 border border-green-700';
+      case 'PENDING': return 'bg-yellow-900/50 text-yellow-300 border border-yellow-700';
+      case 'OVERDUE': return 'bg-red-900/50 text-red-300 border border-red-700';
+      case 'PARTIAL': return 'bg-blue-900/50 text-blue-300 border border-blue-700';
+      default: return 'bg-gray-700 text-gray-300 border border-gray-600';
     }
   };
 
@@ -205,10 +206,10 @@ const FeeDetails = () => {
 
   // Get days remaining color
   const getDaysRemainingColor = (days) => {
-    if (days < 0) return 'text-red-600';
-    if (days <= 3) return 'text-yellow-600';
-    if (days <= 7) return 'text-blue-600';
-    return 'text-green-600';
+    if (days < 0) return 'text-red-400';
+    if (days <= 3) return 'text-yellow-400';
+    if (days <= 7) return 'text-blue-400';
+    return 'text-green-400';
   };
 
   // Open update modal
@@ -345,574 +346,581 @@ const FeeDetails = () => {
   };
 
   return (
-    <div className="space-y-6">
-       <AdminNavbar />
-      <ToastContainer position="top-right" autoClose={3000} />
-      
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800">Fee Management</h1>
-        <div className="flex gap-3">
-          <button
-            onClick={handleExportFees}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Export CSV
-          </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Add Fee Record
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
-          <div className="text-center">
-            <h3 className="text-gray-500 text-sm font-medium">Total Fees</h3>
-            <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalFees}</p>
-            <p className="text-sm text-gray-500 mt-1">
-              Avg: {formatCurrency(stats.avgFee)}
-            </p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gray-900">
+      <AdminNavbar />
+      <div className="space-y-6 p-6">
+        <ToastContainer 
+          position="top-right" 
+          autoClose={3000}
+          theme="dark"
+        />
         
-        <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
-          <div className="text-center">
-            <h3 className="text-gray-500 text-sm font-medium">Amount Collected</h3>
-            <p className="text-3xl font-bold text-green-600 mt-2">
-              {formatCurrency(stats.totalPaid)}
-            </p>
-            <p className="text-sm text-gray-500 mt-1">
-              {stats.collectionRate}% collection rate
-            </p>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-yellow-500">
-          <div className="text-center">
-            <h3 className="text-gray-500 text-sm font-medium">Pending Fees</h3>
-            <p className="text-3xl font-bold text-yellow-600 mt-2">
-              {stats.pendingFees + stats.overdueFees}
-            </p>
-            <p className="text-sm text-gray-500 mt-1">
-              {stats.overdueFees} overdue
-            </p>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-red-500">
-          <div className="text-center">
-            <h3 className="text-gray-500 text-sm font-medium">Outstanding Amount</h3>
-            <p className="text-3xl font-bold text-red-600 mt-2">
-              {formatCurrency(stats.totalOutstanding)}
-            </p>
-            <p className="text-sm text-gray-500 mt-1">
-              From {stats.totalDue} total due
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters and Search */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Search Fees
-            </label>
-            <input
-              type="text"
-              placeholder="Search by student email, fee ID, or reference..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-white">Fee Management</h1>
+          <div className="flex gap-3">
+            <button
+              onClick={handleExportFees}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
             >
-              <option value="all">All Status</option>
-              <option value="PAID">Paid</option>
-              <option value="PENDING">Pending</option>
-              <option value="OVERDUE">Overdue</option>
-              <option value="PARTIAL">Partial</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Due Date
-            </label>
-            <select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export CSV
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
             >
-              <option value="all">All Dates</option>
-              <option value="overdue">Overdue</option>
-              <option value="thisWeek">Due This Week</option>
-              <option value="thisMonth">Due This Month</option>
-            </select>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Add Fee Record
+            </button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+            <div className="text-center">
+              <h3 className="text-gray-400 text-sm font-medium">Total Fees</h3>
+              <p className="text-3xl font-bold text-white mt-2">{stats.totalFees}</p>
+              <p className="text-sm text-gray-400 mt-1">
+                Avg: {formatCurrency(stats.avgFee)}
+              </p>
+            </div>
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Sort By
-            </label>
-            <div className="flex gap-2">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="dueDate">Due Date</option>
-                <option value="amountDue">Amount Due</option>
-                <option value="amountPaid">Amount Paid</option>
-                <option value="createdAt">Created Date</option>
-              </select>
-              <button
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                {sortOrder === 'asc' ? '↑' : '↓'}
-              </button>
+          <div className="bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+            <div className="text-center">
+              <h3 className="text-gray-400 text-sm font-medium">Amount Collected</h3>
+              <p className="text-3xl font-bold text-green-400 mt-2">
+                {formatCurrency(stats.totalPaid)}
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                {stats.collectionRate}% collection rate
+              </p>
+            </div>
+          </div>
+          
+          <div className="bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+            <div className="text-center">
+              <h3 className="text-gray-400 text-sm font-medium">Pending Fees</h3>
+              <p className="text-3xl font-bold text-yellow-400 mt-2">
+                {stats.pendingFees + stats.overdueFees}
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                {stats.overdueFees} overdue
+              </p>
+            </div>
+          </div>
+          
+          <div className="bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+            <div className="text-center">
+              <h3 className="text-gray-400 text-sm font-medium">Outstanding Amount</h3>
+              <p className="text-3xl font-bold text-red-400 mt-2">
+                {formatCurrency(stats.totalOutstanding)}
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                From {stats.totalDue} total due
+              </p>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Fees Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        ) : filteredAndSortedFees.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="text-gray-400 text-6xl mb-4">💰</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No fees found</h3>
-            <p className="text-gray-500">
-              {searchTerm || statusFilter !== 'all' || dateFilter !== 'all' 
-                ? 'Try changing your filters or search terms' 
-                : 'No fee records available'}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Student & Fee Details
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount Details
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status & Dates
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Payment Info
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredAndSortedFees.map((fee) => {
-                  const daysRemaining = getDaysRemaining(fee.dueDate);
-                  const remainingAmount = calculateRemainingAmount(fee.amountDue, fee.amountPaid);
-                  const paymentProgress = fee.amountDue > 0 ? (fee.amountPaid / fee.amountDue * 100) : 0;
-
-                  return (
-                    <tr key={fee._id} className="hover:bg-gray-50">
-                      {/* Student & Fee Details */}
-                      <td className="px-6 py-4">
-                        <div className="space-y-2">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {fee.studentId.email}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Fee ID: {fee._id.substring(0, 8)}...
-                            </div>
-                          </div>
-                          <div className="text-xs text-gray-600">
-                            Created: {formatDate(fee.createdAt)}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Amount Details */}
-                      <td className="px-6 py-4">
-                        <div className="space-y-3">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              Due: {formatCurrency(fee.amountDue)}
-                            </div>
-                            <div className="text-sm text-green-600">
-                              Paid: {formatCurrency(fee.amountPaid)}
-                            </div>
-                            <div className={`text-sm font-bold ${remainingAmount > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                              Remaining: {formatCurrency(remainingAmount)}
-                            </div>
-                          </div>
-                          
-                          {/* Payment Progress Bar */}
-                          <div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className={`h-2 rounded-full ${paymentProgress === 100 ? 'bg-green-500' : paymentProgress > 50 ? 'bg-blue-500' : 'bg-yellow-500'}`}
-                                style={{ width: `${Math.min(paymentProgress, 100)}%` }}
-                              ></div>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {paymentProgress.toFixed(1)}% paid
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Status & Dates */}
-                      <td className="px-6 py-4">
-                        <div className="space-y-3">
-                          <div className="flex flex-col gap-2">
-                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(fee.status)}`}>
-                              {fee.status}
-                            </span>
-                            
-                            <div className="text-sm">
-                              <div className="font-medium text-gray-900">Due Date:</div>
-                              <div className={`${getDaysRemainingColor(daysRemaining)}`}>
-                                {formatDate(fee.dueDate)}
-                                {daysRemaining >= 0 ? (
-                                  <span className="ml-2">({daysRemaining} days left)</span>
-                                ) : (
-                                  <span className="ml-2 text-red-600">({Math.abs(daysRemaining)} days overdue)</span>
-                                )}
-                              </div>
-                            </div>
-                            
-                            {fee.paidAt && (
-                              <div className="text-sm">
-                                <div className="font-medium text-gray-900">Paid At:</div>
-                                <div className="text-green-600">
-                                  {formatDate(fee.paidAt)}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Payment Info */}
-                      <td className="px-6 py-4">
-                        <div className="space-y-2">
-                          {fee.paymentReference && fee.paymentReference.length > 0 ? (
-                            <div>
-                              <div className="text-sm font-medium text-gray-900 mb-1">
-                                Payment References:
-                              </div>
-                              <div className="space-y-1">
-                                {fee.paymentReference.map((ref, index) => (
-                                  <div key={index} className="text-xs bg-gray-100 px-2 py-1 rounded">
-                                    {ref}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-500">No payment references</span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col gap-2">
-                          <button
-                            onClick={() => openUpdateModal(fee)}
-                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                          >
-                            Update Fee
-                          </button>
-                          
-                          {remainingAmount > 0 && (
-                            <button
-                              onClick={() => {
-                                setSelectedFee(fee);
-                                setUpdateData(prev => ({
-                                  ...prev,
-                                  status: 'PAID',
-                                  amountPaid: fee.amountDue
-                                }));
-                                setShowUpdateModal(true);
-                              }}
-                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                            >
-                              Mark as Paid
-                            </button>
-                          )}
-                          
-                          <button
-                            onClick={() => handleDeleteFee(fee._id)}
-                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Update Fee Modal */}
-      {showUpdateModal && selectedFee && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">
-                  Update Fee Record
-                </h2>
-                <button
-                  onClick={() => setShowUpdateModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-2xl"
+        {/* Filters and Search */}
+        <div className="bg-gray-800 rounded-xl shadow-lg p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Search Fees
+              </label>
+              <input
+                type="text"
+                placeholder="Search by student email, fee ID, or reference..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Filter by Status
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Status</option>
+                <option value="PAID">Paid</option>
+                <option value="PENDING">Pending</option>
+                <option value="OVERDUE">Overdue</option>
+                <option value="PARTIAL">Partial</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Filter by Due Date
+              </label>
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Dates</option>
+                <option value="overdue">Overdue</option>
+                <option value="thisWeek">Due This Week</option>
+                <option value="thisMonth">Due This Month</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Sort By
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  ×
+                  <option value="dueDate">Due Date</option>
+                  <option value="amountDue">Amount Due</option>
+                  <option value="amountPaid">Amount Paid</option>
+                  <option value="createdAt">Created Date</option>
+                </select>
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg hover:bg-gray-600"
+                >
+                  {sortOrder === 'asc' ? '↑' : '↓'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
 
-              <div className="space-y-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="font-medium text-blue-900 mb-2">Current Fee Details</h3>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="text-blue-700">Student:</div>
-                    <div>{selectedFee.studentId.email}</div>
-                    
-                    <div className="text-blue-700">Amount Due:</div>
-                    <div>{formatCurrency(selectedFee.amountDue)}</div>
-                    
-                    <div className="text-blue-700">Amount Paid:</div>
-                    <div>{formatCurrency(selectedFee.amountPaid)}</div>
-                    
-                    <div className="text-blue-700">Remaining:</div>
-                    <div className={calculateRemainingAmount(selectedFee.amountDue, selectedFee.amountPaid) > 0 ? 'text-red-600 font-bold' : 'text-green-600 font-bold'}>
-                      {formatCurrency(calculateRemainingAmount(selectedFee.amountDue, selectedFee.amountPaid))}
+        {/* Fees Table */}
+        <div className="bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            </div>
+          ) : filteredAndSortedFees.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="text-gray-600 text-6xl mb-4">💰</div>
+              <h3 className="text-xl font-semibold text-gray-300 mb-2">No fees found</h3>
+              <p className="text-gray-400">
+                {searchTerm || statusFilter !== 'all' || dateFilter !== 'all' 
+                  ? 'Try changing your filters or search terms' 
+                  : 'No fee records available'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-700">
+                <thead className="bg-gray-900">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Student & Fee Details
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Amount Details
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Status & Dates
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Payment Info
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-gray-800 divide-y divide-gray-700">
+                  {filteredAndSortedFees.map((fee) => {
+                    const daysRemaining = getDaysRemaining(fee.dueDate);
+                    const remainingAmount = calculateRemainingAmount(fee.amountDue, fee.amountPaid);
+                    const paymentProgress = fee.amountDue > 0 ? (fee.amountPaid / fee.amountDue * 100) : 0;
+
+                    return (
+                      <tr key={fee._id} className="hover:bg-gray-700">
+                        {/* Student & Fee Details */}
+                        <td className="px-6 py-4">
+                          <div className="space-y-2">
+                            <div>
+                              <div className="text-sm font-medium text-white">
+                                {fee.studentId.email}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                Fee ID: {fee._id.substring(0, 8)}...
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              Created: {formatDate(fee.createdAt)}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Amount Details */}
+                        <td className="px-6 py-4">
+                          <div className="space-y-3">
+                            <div>
+                              <div className="text-sm font-medium text-white">
+                                Due: {formatCurrency(fee.amountDue)}
+                              </div>
+                              <div className="text-sm text-green-400">
+                                Paid: {formatCurrency(fee.amountPaid)}
+                              </div>
+                              <div className={`text-sm font-bold ${remainingAmount > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                Remaining: {formatCurrency(remainingAmount)}
+                              </div>
+                            </div>
+                            
+                            {/* Payment Progress Bar */}
+                            <div>
+                              <div className="w-full bg-gray-700 rounded-full h-2">
+                                <div 
+                                  className={`h-2 rounded-full ${paymentProgress === 100 ? 'bg-green-500' : paymentProgress > 50 ? 'bg-blue-500' : 'bg-yellow-500'}`}
+                                  style={{ width: `${Math.min(paymentProgress, 100)}%` }}
+                                ></div>
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">
+                                {paymentProgress.toFixed(1)}% paid
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Status & Dates */}
+                        <td className="px-6 py-4">
+                          <div className="space-y-3">
+                            <div className="flex flex-col gap-2">
+                              <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(fee.status)}`}>
+                                {fee.status}
+                              </span>
+                              
+                              <div className="text-sm">
+                                <div className="font-medium text-gray-300">Due Date:</div>
+                                <div className={`${getDaysRemainingColor(daysRemaining)}`}>
+                                  {formatDate(fee.dueDate)}
+                                  {daysRemaining >= 0 ? (
+                                    <span className="ml-2">({daysRemaining} days left)</span>
+                                  ) : (
+                                    <span className="ml-2 text-red-400">({Math.abs(daysRemaining)} days overdue)</span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {fee.paidAt && (
+                                <div className="text-sm">
+                                  <div className="font-medium text-gray-300">Paid At:</div>
+                                  <div className="text-green-400">
+                                    {formatDate(fee.paidAt)}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Payment Info */}
+                        <td className="px-6 py-4">
+                          <div className="space-y-2">
+                            {fee.paymentReference && fee.paymentReference.length > 0 ? (
+                              <div>
+                                <div className="text-sm font-medium text-gray-300 mb-1">
+                                  Payment References:
+                                </div>
+                                <div className="space-y-1">
+                                  {fee.paymentReference.map((ref, index) => (
+                                    <div key={index} className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded border border-gray-600">
+                                      {ref}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-400">No payment references</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col gap-2">
+                            <button
+                              onClick={() => openUpdateModal(fee)}
+                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800"
+                            >
+                              Update Fee
+                            </button>
+                            
+                            {remainingAmount > 0 && (
+                              <button
+                                onClick={() => {
+                                  setSelectedFee(fee);
+                                  setUpdateData(prev => ({
+                                    ...prev,
+                                    status: 'PAID',
+                                    amountPaid: fee.amountDue
+                                  }));
+                                  setShowUpdateModal(true);
+                                }}
+                                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 focus:ring-offset-gray-800"
+                              >
+                                Mark as Paid
+                              </button>
+                            )}
+                            
+                            <button
+                              onClick={() => handleDeleteFee(fee._id)}
+                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-gray-800"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Update Fee Modal */}
+        {showUpdateModal && selectedFee && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-xl shadow-2xl max-w-md w-full border border-gray-700">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-white">
+                    Update Fee Record
+                  </h2>
+                  <button
+                    onClick={() => setShowUpdateModal(false)}
+                    className="text-gray-400 hover:text-gray-300 text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-gray-700 p-4 rounded-lg border border-gray-600">
+                    <h3 className="font-medium text-blue-300 mb-2">Current Fee Details</h3>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="text-blue-300">Student:</div>
+                      <div className="text-white">{selectedFee.studentId.email}</div>
+                      
+                      <div className="text-blue-300">Amount Due:</div>
+                      <div className="text-white">{formatCurrency(selectedFee.amountDue)}</div>
+                      
+                      <div className="text-blue-300">Amount Paid:</div>
+                      <div className="text-white">{formatCurrency(selectedFee.amountPaid)}</div>
+                      
+                      <div className="text-blue-300">Remaining:</div>
+                      <div className={calculateRemainingAmount(selectedFee.amountDue, selectedFee.amountPaid) > 0 ? 'text-red-400 font-bold' : 'text-green-400 font-bold'}>
+                        {formatCurrency(calculateRemainingAmount(selectedFee.amountDue, selectedFee.amountPaid))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Status *
+                    </label>
+                    <select
+                      value={updateData.status}
+                      onChange={(e) => setUpdateData({...updateData, status: e.target.value})}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    >
+                      <option value="">Select Status</option>
+                      <option value="PAID">Paid</option>
+                      <option value="PENDING">Pending</option>
+                      <option value="OVERDUE">Overdue</option>
+                      <option value="PARTIAL">Partial Payment</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Additional Amount Paid (₹)
+                    </label>
+                    <input
+                      type="number"
+                      value={updateData.amountPaid}
+                      onChange={(e) => setUpdateData({...updateData, amountPaid: e.target.value})}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter amount paid"
+                      min="0"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Current paid: {formatCurrency(selectedFee.amountPaid)} | 
+                      New total: {formatCurrency(selectedFee.amountPaid + Number(updateData.amountPaid || 0))}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Payment Reference
+                    </label>
+                    <input
+                      type="text"
+                      value={updateData.paymentReference}
+                      onChange={(e) => setUpdateData({...updateData, paymentReference: e.target.value})}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter transaction/reference ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Payment Date
+                    </label>
+                    <input
+                      type="date"
+                      value={updateData.paidAt}
+                      onChange={(e) => setUpdateData({...updateData, paidAt: e.target.value})}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div className="pt-4 border-t border-gray-700">
+                    <div className="flex justify-end gap-3">
+                      <button
+                        onClick={() => setShowUpdateModal(false)}
+                        className="px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700"
+                        disabled={updating}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleUpdateFee}
+                        disabled={updating}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {updating ? 'Updating...' : 'Update Fee'}
+                      </button>
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status *
-                  </label>
-                  <select
-                    value={updateData.status}
-                    onChange={(e) => setUpdateData({...updateData, status: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
+        {/* Add Fee Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-xl shadow-2xl max-w-md w-full border border-gray-700">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-white">
+                    Add New Fee Record
+                  </h2>
+                  <button
+                    onClick={() => setShowAddModal(false)}
+                    className="text-gray-400 hover:text-gray-300 text-2xl"
                   >
-                    <option value="">Select Status</option>
-                    <option value="PAID">Paid</option>
-                    <option value="PENDING">Pending</option>
-                    <option value="OVERDUE">Overdue</option>
-                    <option value="PARTIAL">Partial Payment</option>
-                  </select>
+                    ×
+                  </button>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Additional Amount Paid (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={updateData.amountPaid}
-                    onChange={(e) => setUpdateData({...updateData, amountPaid: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter amount paid"
-                    min="0"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Current paid: {formatCurrency(selectedFee.amountPaid)} | 
-                    New total: {formatCurrency(selectedFee.amountPaid + Number(updateData.amountPaid || 0))}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Payment Reference
-                  </label>
-                  <input
-                    type="text"
-                    value={updateData.paymentReference}
-                    onChange={(e) => setUpdateData({...updateData, paymentReference: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter transaction/reference ID"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Payment Date
-                  </label>
-                  <input
-                    type="date"
-                    value={updateData.paidAt}
-                    onChange={(e) => setUpdateData({...updateData, paidAt: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="pt-4 border-t">
-                  <div className="flex justify-end gap-3">
-                    <button
-                      onClick={() => setShowUpdateModal(false)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                      disabled={updating}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Select Student *
+                    </label>
+                    <select
+                      value={newFee.studentId}
+                      onChange={(e) => setNewFee({...newFee, studentId: e.target.value})}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
                     >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleUpdateFee}
-                      disabled={updating}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {updating ? 'Updating...' : 'Update Fee'}
-                    </button>
+                      <option value="">Select a student</option>
+                      {users
+                        .filter(user => user.role === 'STUDENT')
+                        .map(user => (
+                          <option key={user._id} value={user._id}>
+                            {user.name} ({user.email})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Amount Due (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      value={newFee.amountDue}
+                      onChange={(e) => setNewFee({...newFee, amountDue: e.target.value})}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter amount due"
+                      min="0"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Due Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={newFee.dueDate}
+                      onChange={(e) => setNewFee({...newFee, dueDate: e.target.value})}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Description (Optional)
+                    </label>
+                    <textarea
+                      value={newFee.description}
+                      onChange={(e) => setNewFee({...newFee, description: e.target.value})}
+                      rows="3"
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+                      placeholder="Add any description or notes..."
+                    ></textarea>
+                  </div>
+
+                  <div className="pt-4 border-t border-gray-700">
+                    <div className="flex justify-end gap-3">
+                      <button
+                        onClick={() => setShowAddModal(false)}
+                        className="px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleAddFee}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        Create Fee Record
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Add Fee Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">
-                  Add New Fee Record
-                </h2>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-2xl"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Student *
-                  </label>
-                  <select
-                    value={newFee.studentId}
-                    onChange={(e) => setNewFee({...newFee, studentId: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="">Select a student</option>
-                    {users
-                      .filter(user => user.role === 'STUDENT')
-                      .map(user => (
-                        <option key={user._id} value={user._id}>
-                          {user.name} ({user.email})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Amount Due (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    value={newFee.amountDue}
-                    onChange={(e) => setNewFee({...newFee, amountDue: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter amount due"
-                    min="0"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Due Date *
-                  </label>
-                  <input
-                    type="date"
-                    value={newFee.dueDate}
-                    onChange={(e) => setNewFee({...newFee, dueDate: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description (Optional)
-                  </label>
-                  <textarea
-                    value={newFee.description}
-                    onChange={(e) => setNewFee({...newFee, description: e.target.value})}
-                    rows="3"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Add any description or notes..."
-                  ></textarea>
-                </div>
-
-                <div className="pt-4 border-t">
-                  <div className="flex justify-end gap-3">
-                    <button
-                      onClick={() => setShowAddModal(false)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleAddFee}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      Create Fee Record
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
+
 export default FeeDetails;

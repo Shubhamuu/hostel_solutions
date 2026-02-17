@@ -9,16 +9,16 @@
 
 /* Light Mode (default) */
 :root {
-  --bg-main: #f8fafc;           /* light background */
-  --bg-card: #ffffff;
-  --bg-section: #eef2ff;
-  --text-main: #0f172a;
-  --text-muted: #475569;
-  --border-main: #e2e8f0;
+  --bg-main: #0b0d10;
+  --bg-card: #1c1f2a;
+  --bg-section: #151821;
+  --text-main: #ffffff;
+  --text-muted: #9ca3af;
+  --border-main: #1f2937;
 
-  --primary: #2563eb;           /* blue */
-  --primary-hover: #1d4ed8;
-  --accent: #3b82f6;
+  --primary: #f59e0b;           /* amber */
+  --primary-hover: #f97316;
+  --accent: #fb923c;
 }
 
 /* Dark Mode */
