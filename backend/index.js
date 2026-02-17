@@ -38,6 +38,7 @@ const menuRoutes = require("./routes/menuroutes");
 // const Menu = require('./models/Menu');
 const authRoutes = require("./routes/authRoutes");
 const hostelRoutes = require("./routes/hostelRoutes");
+const incomeRoutes = require("./routes/incomeRoutes");
 // Routes
 app.use("/api/hostels", hostelRoutes);
 //payment routes
@@ -54,9 +55,11 @@ app.use("/api/users", userRoutes);
 //app.use('/api/rooms', roomRoutes);
 //app.use('/api/seater', seaterRoutes);
 app.use("/api/fees", feeRoutes);
+const disbursementRoutes = require("./routes/disbursementRoutes");
+app.use("/api/disbursements", disbursementRoutes);
 app.use("/api/menu", menuRoutes);
 //app.use('/api/dashboard', dashboardRoutes);
-
+app.use("/api/income",incomeRoutes)
 // Basic error handler middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

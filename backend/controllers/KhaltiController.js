@@ -91,104 +91,122 @@ exports.initiateKhaltiFeePayment = async (req, res) => {
 };
 
 exports.verifyKhaltiFeePayment = async (req, res) => {
+  const session = await mongoose.startSession();
+
   try {
-    console.log("🔍 [Khalti Verify] Body:", req.body);
+    const { pidx, fee_id } = req.body;
 
-    const { pidx, fee_id, transactionId } = req.body;
-
-    if (!pidx) {
-      return res.status(400).json({ message: "Missing pidx" });
+    if (!pidx || !fee_id) {
+      return res.status(400).json({ message: "Missing pidx or fee_id" });
     }
 
-    // 1️⃣ Lookup payment status from Khalti
-    const khaltiResponse = await axios.post(
-      "https://dev.khalti.com/api/v2/epayment/lookup/",
-      { pidx },
-      {
-        headers: {
-          Authorization: `Key ${KHALTI_API_KEY.trim()}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    if (khaltiResponse.data.status !== "Completed") {
-      return res.status(400).json({
-        message: `Payment not completed`,
-        status: khaltiResponse.data.status,
-      });
-    }
-
-    // 2️⃣ Find Fee using saved pidx
-    const fee = await Fee.findById(fee_id);
-    console.log("🔍 [Fee Found]:", fee);
-    if (!fee) {
-      return res.status(404).json({
-        message: "Fee record not found for this payment",
-      });
-    }
-
-    // 3️⃣ Prevent double verification
-    if (fee.KhaltipaymentStatus === "PAID") {
-      return res.status(200).json({
-        message: "Payment already verified",
-        fee,
-      });
-    }
-
-    // 4️⃣ Update fee
-    const amountPaid = khaltiResponse.data.total_amount / 100;
-
-    fee.amountPaid = Math.min(
-      fee.amountPaid + amountPaid,
-      fee.amountDue
-    );
-    fee.paymentReference="khalti";
-    fee.status = fee.amountPaid >= fee.amountDue ? "PAID" : "PARTIAL";
-    fee.KhaltipaymentStatus = "PAID";
-    fee.paidAt = new Date();
-    fee.updatedAt = new Date();
-
-    await fee.save();
-
-    // 5️⃣ Update booking status
-
-
-    const booking = await Booking.findOne({
-      studentId: fee.studentId,
-      status: "PENDING"
-    });
-
-    if (booking) {
-      booking.status = "CONFIRMED";
-      await booking.save();
-
-      await Room.findByIdAndUpdate(
-        booking.roomId,
-        { $inc: { booking: -1, currentOccupancy: 1 } }
+    // ── 1. Khalti lookup OUTSIDE the transaction ──────────────────────
+    // External HTTP calls must never sit inside a DB transaction —
+    // they can't be rolled back and hold the session open too long.
+    let khaltiData;
+    try {
+      const { data } = await axios.post(
+        "https://dev.khalti.com/api/v2/epayment/lookup/",
+        { pidx },
+        {
+          headers: {
+            Authorization: `Key ${KHALTI_API_KEY.trim()}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 10_000, // don't hang forever
+        }
       );
+      khaltiData = data;
+    } catch (axiosErr) {
+      return res.status(502).json({
+        message: "Failed to reach Khalti — please retry",
+        error: axiosErr.response?.data || axiosErr.message,
+      });
     }
 
+    if (khaltiData.status !== "Completed") {
+      return res.status(400).json({
+        message: "Payment not completed",
+        status: khaltiData.status,
+      });
+    }
 
-    // 6️⃣ Mark user as verified
-    await User.findByIdAndUpdate(
-      fee.studentId,
-      { $set: { isVerified: true } },
-      { new: true }
-    );
+    const amountPaid = khaltiData.total_amount / 100; // paisa → rupees
+
+    // ── 2. All DB mutations in one atomic transaction ─────────────────
+    let fee;
+
+    await session.withTransaction(async () => {
+      // ── Fee ──────────────────────────────────────────────────────────
+      fee = await Fee.findById(fee_id).session(session);
+      if (!fee) {
+        const err = new Error("Fee record not found");
+        err.statusCode = 404;
+        throw err;
+      }
+
+      // Idempotency guard — safe to call twice without double-crediting
+      if (fee.KhaltipaymentStatus === "PAID") {
+        const err = new Error("ALREADY_PAID");
+        err.statusCode = 200;
+        err.fee = fee;
+        throw err;
+      }
+
+      fee.amountPaid   = Math.min(fee.amountPaid + amountPaid, fee.amountDue);
+      fee.paymentReference  = "khalti";
+      fee.status            = fee.amountPaid >= fee.amountDue ? "PAID" : "PARTIAL";
+      fee.KhaltipaymentStatus = "PAID";
+      fee.paidAt            = new Date();
+      await fee.save({ session });
+
+      // ── Booking ──────────────────────────────────────────────────────
+      // findOneAndUpdate is atomic; no separate save() needed
+      const booking = await Booking.findOneAndUpdate(
+        { studentId: fee.studentId, status: "PENDING" },
+        { $set: { status: "CONFIRMED" } },
+        { new: true, session }
+      );
+
+      if (booking) {
+        // Decrement available slot, increment occupancy — one round-trip
+        await Room.findByIdAndUpdate(
+          booking.roomId,
+          { $inc: { booking: -1, currentOccupancy: 1 } },
+          { session }
+        );
+      }
+
+      // ── User ─────────────────────────────────────────────────────────
+      await User.findByIdAndUpdate(
+        fee.studentId,
+        { $set: { isVerified: true } },
+        { session }
+      );
+    });
 
     return res.status(200).json({
       message: "✅ Payment verified successfully",
       fee,
-      khalti_data: khaltiResponse.data,
+      khalti_data: khaltiData,
     });
 
   } catch (err) {
-    console.error("❌ Khalti Verify Error:", err.response?.data || err.message);
+    // Intentional early-exit errors thrown inside the transaction
+    if (err.statusCode === 200 && err.message === "ALREADY_PAID") {
+      return res.status(200).json({ message: "Payment already verified", fee: err.fee });
+    }
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({ message: err.message });
+    }
 
+    console.error("❌ Khalti Verify Error:", err);
     return res.status(500).json({
       message: "Khalti payment verification failed",
-      error: err.response?.data || err.message,
+      error: err.message,
     });
+  } finally {
+    session.endSession();
   }
 };
 

@@ -34,6 +34,8 @@ export default function SuperAdminDashboard() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [expandedAdmin, setExpandedAdmin] = useState(null);
 
+  const [incomeStats, setIncomeStats] = useState(null);
+
   /* ================= FETCH ADMINS ================= */
   const fetchAdmins = async () => {
     try {
@@ -47,21 +49,31 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const fetchIncomeStats = async () => {
+    try {
+      const res = await apiprivate.get("/income/analytics");
+      setIncomeStats(res.data.data);
+    } catch (err) {
+      console.error("Failed to load income stats", err);
+    }
+  };
+
   useEffect(() => {
     fetchAdmins();
+    fetchIncomeStats();
   }, []);
 
   /* ================= FILTER ADMINS ================= */
   const filteredAdmins = useMemo(() => {
     return admins.filter((admin) => {
-      const matchesSearch = 
+      const matchesSearch =
         admin.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         admin.email?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = 
-        statusFilter === "ALL" || 
+
+      const matchesStatus =
+        statusFilter === "ALL" ||
         admin.approvalStatus === statusFilter;
-      
+
       return matchesSearch && matchesStatus;
     });
   }, [admins, searchTerm, statusFilter]);
@@ -83,7 +95,7 @@ export default function SuperAdminDashboard() {
     try {
       setActionLoading(`approve-${adminId}`);
       await apiprivate.post("/users/admin/approve", { adminId });
-      
+
       setAdmins((prev) =>
         prev.map((a) =>
           a._id === adminId
@@ -154,9 +166,63 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0B0D10] via-[#111827] to-[#0B0D10] px-4 py-8 sm:px-6 lg:px-8 text-white">
-     <SuperAdminSimpleNavbar />
+      <SuperAdminSimpleNavbar />
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+       
+
+        {/* Income Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-gradient-to-br from-gray-900/40 to-gray-800/40 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 relative overflow-hidden group hover:border-green-500/30 transition-all duration-300">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Building size={64} className="text-green-500" />
+            </div>
+            <div className="relative z-10">
+              <p className="text-sm text-gray-400 font-medium uppercase tracking-wider">Total Revenue</p>
+              <h3 className="text-3xl font-bold text-white mt-1">
+                Rs. {incomeStats?.totalIncome?.toLocaleString() || "0"}
+              </h3>
+              <p className="text-xs text-green-400 mt-2 flex items-center gap-1">
+                <CheckCircle size={12} /> Lifetime Service Fees
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-gray-900/40 to-gray-800/40 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 relative overflow-hidden group hover:border-blue-500/30 transition-all duration-300">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Calendar size={64} className="text-blue-500" />
+            </div>
+            <div className="relative z-10">
+              <p className="text-sm text-gray-400 font-medium uppercase tracking-wider">This Month</p>
+              <h3 className="text-3xl font-bold text-white mt-1">
+                Rs. {incomeStats?.monthlyIncome?.toLocaleString() || "0"}
+              </h3>
+              <p className="text-xs text-blue-400 mt-2 flex items-center gap-1">
+                <Clock size={12} /> Current Month Earnings
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-gray-900/40 to-gray-800/40 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <FileText size={64} className="text-purple-500" />
+            </div>
+            <div className="relative z-10">
+              <p className="text-sm text-gray-400 font-medium uppercase tracking-wider">Recent Transactions</p>
+              <div className="mt-2 space-y-2">
+                {incomeStats?.recentTransactions?.slice(0, 2).map((tx, i) => (
+                  <div key={i} className="flex justify-between items-center text-xs border-b border-gray-700/50 pb-1 last:border-0 last:pb-0">
+                    <span className="text-gray-300 truncate w-24" title={tx.hostelId?.name}>{tx.hostelId?.name || "Unknown"}</span>
+                    <span className="text-green-400 font-mono">+Rs.{tx.amount}</span>
+                  </div>
+                ))}
+                {(!incomeStats?.recentTransactions || incomeStats.recentTransactions.length === 0) && (
+                  <p className="text-xs text-gray-500 italic">No recent transactions</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+ {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
           <div>
             <div className="flex items-center gap-3 mb-2">
@@ -169,17 +235,20 @@ export default function SuperAdminDashboard() {
             </div>
             <p className="text-gray-400">Review and manage hostel admin applications</p>
           </div>
-          
+
           <button
-            onClick={fetchAdmins}
+            onClick={() => { fetchAdmins(); fetchIncomeStats(); }}
             className="mt-4 md:mt-0 px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all duration-300 flex items-center gap-2 group"
           >
             <RefreshCw size={18} className={loading ? "animate-spin" : "group-hover:rotate-180 transition-transform"} />
             Refresh Data
           </button>
         </div>
-
-        {/* Stats Cards */}
+        {/* Stats Cards (Admin Applications) */}
+        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+          <Users size={20} className="text-amber-500" />
+          Application Overview
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-gray-900/40 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 hover:border-blue-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
@@ -192,7 +261,7 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-gray-900/40 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 hover:border-yellow-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
@@ -204,7 +273,7 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-gray-900/40 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 hover:border-green-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
@@ -216,7 +285,7 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-gray-900/40 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 hover:border-red-500/30 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
@@ -245,24 +314,23 @@ export default function SuperAdminDashboard() {
                 />
               </div>
             </div>
-            
+
             <div className="flex flex-wrap gap-2">
               {["ALL", "PENDING", "APPROVED", "REJECTED"].map((status) => (
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
-                  className={`px-4 py-2 rounded-xl transition-all duration-300 ${
-                    statusFilter === status
-                      ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg"
-                      : "bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700"
-                  }`}
+                  className={`px-4 py-2 rounded-xl transition-all duration-300 ${statusFilter === status
+                    ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg"
+                    : "bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700"
+                    }`}
                 >
                   {status}
                 </button>
               ))}
             </div>
           </div>
-          
+
           <div className="mt-4 text-sm text-gray-400 flex items-center gap-2">
             <FileCheck size={16} />
             Showing {filteredAdmins.length} of {admins.length} applications
@@ -298,13 +366,12 @@ export default function SuperAdminDashboard() {
                         <div className="flex flex-wrap items-center gap-3 mb-2">
                           <h3 className="text-lg font-semibold text-white">{admin.name}</h3>
                           <span
-                            className={`px-3 py-1 rounded-full text-xs font-semibold border ${
-                              admin.approvalStatus === "APPROVED"
-                                ? "bg-green-500/10 text-green-300 border-green-500/30"
-                                : admin.approvalStatus === "REJECTED"
+                            className={`px-3 py-1 rounded-full text-xs font-semibold border ${admin.approvalStatus === "APPROVED"
+                              ? "bg-green-500/10 text-green-300 border-green-500/30"
+                              : admin.approvalStatus === "REJECTED"
                                 ? "bg-red-500/10 text-red-300 border-red-500/30"
                                 : "bg-yellow-500/10 text-yellow-300 border-yellow-500/30"
-                            }`}
+                              }`}
                           >
                             {admin.approvalStatus || "PENDING"}
                           </span>
@@ -354,7 +421,7 @@ export default function SuperAdminDashboard() {
                           </button>
                         </>
                       )}
-                      
+
                       {admin.approvalStatus === "APPROVED" && (
                         <button
                           onClick={() => deleteAdmin(admin._id)}
@@ -369,7 +436,7 @@ export default function SuperAdminDashboard() {
                           Delete
                         </button>
                       )}
-                      
+
                       <button
                         onClick={() => setExpandedAdmin(expandedAdmin === admin._id ? null : admin._id)}
                         className="p-3 bg-gray-800/50 hover:bg-gray-700/50 rounded-xl transition-all duration-300 group"
@@ -452,11 +519,10 @@ export default function SuperAdminDashboard() {
                         <div className="space-y-4 bg-gray-800/30 rounded-xl p-6">
                           <div className="flex justify-between items-center pb-3 border-b border-gray-700">
                             <span className="text-gray-400">Verification Status</span>
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              admin.isVerified 
-                                ? "bg-green-500/20 text-green-300 border border-green-500/30"
-                                : "bg-red-500/20 text-red-300 border border-red-500/30"
-                            }`}>
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${admin.isVerified
+                              ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                              : "bg-red-500/20 text-red-300 border border-red-500/30"
+                              }`}>
                               {admin.isVerified ? "Verified" : "Not Verified"}
                             </span>
                           </div>

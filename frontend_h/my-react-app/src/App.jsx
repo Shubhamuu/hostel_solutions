@@ -29,6 +29,9 @@ import RoomDetailsById from './pages/landing/roomsById.jsx';
 import HostelDetail from "./pages/admin/hostelDetails.jsx";
 import ProfileSection from "./pages/student/profile.jsx"
 import AllUsersCard from "./pages/superadmin/allUser.jsx"
+import AllHostel from "./pages/superadmin/allHostel.jsx"
+import AllFees from "./pages/superadmin/allFees.jsx"
+import MyBills from "./pages/admin/myBills.jsx"
 function App() {
 
 
@@ -42,12 +45,14 @@ function App() {
       <Route path='/login' element={<Login />} />
       <Route path='/forgot-Password' element={<ForgotPassword />} />
       <Route path='/hostels' element={<HostelDetails />} />
-      <Route path='/room-details/:roomId' element={<RoomDetailsById/>}/>
+      <Route path='/room-details/:roomId' element={<RoomDetailsById />} />
       <Route path='/search' element={<Search />} />
       <Route element={<ProtectedRoute allowedRoles={['SUPERADMIN']} />}>
         <Route path='/superadmin' element={<Outlet />} >
           <Route path='dashboard' element={<SuperAdminDashboard />} />
-          <Route path='alluser' element={<AllUsersCard />}/>
+          <Route path='alluser' element={<AllUsersCard />} />
+          <Route path='allhostel' element={<AllHostel />} />
+          <Route path='allfees' element={<AllFees />} />
         </Route>
       </Route>
 
@@ -60,8 +65,9 @@ function App() {
           <Route path="fee" element={<FeeDetails />} />
           <Route path="menu" element={<MenuManager />} />
           <Route path="hostel-images" element={<AddHostelImages />} />
+          <Route path="my-bills" element={<MyBills />} />
           <Route path="bookingDetails" element={<BookingDetails />} />
-          <Route path="hostelDetail" element = {<HostelDetail />} />
+          <Route path="hostelDetail" element={<HostelDetail />} />
         </Route>
       </Route>
 
@@ -73,7 +79,7 @@ function App() {
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/mybooking" element={<MyBooking />} />
         <Route path="/myroom" element={<MyRoom />} />
-        <Route path="/student/profile" element={<ProfileSection />}/>
+        <Route path="/student/profile" element={<ProfileSection />} />
       </Route>
     </Routes >
   </>

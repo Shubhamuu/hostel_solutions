@@ -143,89 +143,103 @@ exports.register = async (req, res) => {
 
 
 exports.verifyOtp = async (req, res) => {
+  const session = await mongoose.startSession();
+
   try {
     const { email, verificationCode } = req.body;
 
-    const tempUser = await TempUser.findOne({ email });
-    console.log("TempUser found for verification:", tempUser);
-    console.log("email:", email, "verificationCode:", verificationCode);
-    if (!tempUser) {
-      return res.status(400).json({ message: 'Invalid email' });
+    if (!email || !verificationCode) {
+      return res.status(400).json({ message: 'Email and verification code are required' });
     }
 
-    if (tempUser.verificationCode !== verificationCode) {
-      return res.status(400).json({ message: 'Invalid verification code' });
-    }
+    let responsePayload;
 
-    // -------------------------
-    // CREATE USER
-    // -------------------------
-    const userData = {
-      name: tempUser.name,
-      email: tempUser.email,
-      passwordHash: tempUser.passwordHash,
-      role: tempUser.role,
-      isApproved: tempUser.role === 'ADMIN' ? false : true,
-      isVerified: true,
-      verifiedAt: new Date(),
-      verificationDocuments: tempUser.verificationDocuments || [],
-    };
+    await session.withTransaction(async () => {
+      // ── Isolation: all reads inside the transaction ───────────────
+      const tempUser = await TempUser.findOne({ email }).session(session);
 
-    const user = new User(userData);
-    await user.save();
-
-    let hostel = null;
-
-    // -------------------------
-    // CREATE HOSTEL (ADMIN ONLY)
-    // -------------------------
-    if (tempUser.role === 'ADMIN') {
-      const existingHostel = await Hostel.findOne({
-        name: tempUser.hostelName,
-      });
-
-      if (!existingHostel) {
-        hostel = new Hostel({
-          name: tempUser.hostelName,
-          address: tempUser.hostelLocation,
-          adminId: user._id,
-          isActive: false,
-        });
-
-        await hostel.save();
-      } else {
-        hostel = existingHostel;
+      if (!tempUser) {
+        const err = new Error('Invalid email');
+        err.statusCode = 400;
+        throw err;
       }
 
-      // Link hostel to admin
-      user.managedHostelId = hostel._id;
-      user.hostelname = hostel.name;
-      await user.save();
-    }
+      if (tempUser.verificationCode !== verificationCode) {
+        const err = new Error('Invalid verification code');
+        err.statusCode = 400;
+        throw err;
+      }
 
+      // ── Consistency: prevent duplicate verified users ─────────────
+      const existingUser = await User.findOne({ email }).session(session);
+      if (existingUser) {
+        const err = new Error('User already verified');
+        err.statusCode = 400;
+        throw err;
+      }
 
+      // ── CREATE USER ───────────────────────────────────────────────
+      const user = new User({
+        name: tempUser.name,
+        email: tempUser.email,
+        passwordHash: tempUser.passwordHash,
+        role: tempUser.role,
+        isApproved: tempUser.role !== 'ADMIN',
+        isVerified: true,
+        verifiedAt: new Date(),
+        verificationDocuments: tempUser.verificationDocuments || [],
+      });
 
-    // Optional: success email
-    await successRegistration(user.name, user.email);
-    console.log("Sent success registration email to:", user.email);
-    // -------------------------
-    // CLEANUP TEMP USER
-    // -------------------------
-    await TempUser.deleteOne({ _id: tempUser._id });
-    return res.status(201).json({
-      success: true,
-      message:
-        tempUser.role === 'ADMIN'
-          ? 'Registration successful. Awaiting super admin approval.'
-          : 'Registration successful. You can now log in.',
+      await user.save({ session });
+
+      // ── CREATE / LINK HOSTEL (ADMIN ONLY) ─────────────────────────
+      if (tempUser.role === 'ADMIN') {
+        let hostel = await Hostel.findOne({ name: tempUser.hostelName }).session(session);
+
+        if (!hostel) {
+          hostel = new Hostel({
+            name: tempUser.hostelName,
+            address: tempUser.hostelLocation,
+            adminId: user._id,
+            isActive: false,
+          });
+          await hostel.save({ session });
+        }
+
+        // Link hostel → admin atomically in the same tx
+        user.managedHostelId = hostel._id;
+        user.hostelname = hostel.name;
+        await user.save({ session });
+      }
+
+      // ── CLEANUP TEMP USER (inside tx so it's all-or-nothing) ──────
+      await TempUser.deleteOne({ _id: tempUser._id }).session(session);
+
+      // ── SUCCESS EMAIL (inside tx — rolls back writes if this fails) 
+      await successRegistration(user.name, user.email);
+
+      responsePayload = {
+        status: 201,
+        body: {
+          success: true,
+          message:
+            tempUser.role === 'ADMIN'
+              ? 'Registration successful. Awaiting super admin approval.'
+              : 'Registration successful. You can now log in.',
+        },
+      };
     });
+
+    return res.status(responsePayload.status).json(responsePayload.body);
 
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({
-      message: 'Server error',
-      error: err.message,
-    });
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({ message: err.message });
+    }
+    console.error('[verifyOtp]', err);
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  } finally {
+    session.endSession();
   }
 };
 

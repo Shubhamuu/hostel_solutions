@@ -17,7 +17,7 @@ const AdminNavbar = () => {
       try {
         const res = await apiprivate.get("/users/profile");
         setAdmin(res.data.user);
-        if(res.data.user.approvalStatus === "REJECTED" || res.data.user.approvalStatus === "PENDING") {
+        if (res.data.user.approvalStatus === "REJECTED" || res.data.user.approvalStatus === "PENDING") {
           localStorage.setItem("user", JSON.stringify(res.data.user));
         }
         // Simulate notification count (replace with actual API)
@@ -62,6 +62,7 @@ const AdminNavbar = () => {
     { label: "Rooms", path: "/admin/rooms" },
     { label: "Bookings", path: "/admin/bookingDetails" },
     { label: "Students", path: "/admin/students" },
+    { label: "My Bills", path: "/admin/my-bills" },
   ];
 
   if (loading) return (
@@ -80,16 +81,16 @@ const AdminNavbar = () => {
     <>
       <nav className="w-full bg-[#0B0D10]/95 backdrop-blur-lg border-b border-gray-800 px-4 sm:px-6 py-3 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          
+
           {/* Left: Logo & Brand */}
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="lg:hidden p-2 rounded-lg hover:bg-gray-800 transition-colors"
             >
               {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-            
+
             <Link to="/admin" className="flex items-center gap-3 group">
               <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg group-hover:scale-105 transition-transform">
                 <Shield className="text-white" size={22} />
@@ -134,7 +135,7 @@ const AdminNavbar = () => {
             </button>
 
             {/* Settings */}
-            <Link 
+            <Link
               to="/admin/settings"
               className="p-2 rounded-xl hover:bg-gray-800/50 transition-colors group"
             >
@@ -156,11 +157,10 @@ const AdminNavbar = () => {
                   </p>
                   <p className="text-xs text-gray-400">Administrator</p>
                 </div>
-                <ChevronDown 
-                  size={16} 
-                  className={`text-gray-400 transition-transform duration-200 ${
-                    isProfileDropdownOpen ? 'rotate-180' : ''
-                  }`}
+                <ChevronDown
+                  size={16}
+                  className={`text-gray-400 transition-transform duration-200 ${isProfileDropdownOpen ? 'rotate-180' : ''
+                    }`}
                 />
               </button>
 

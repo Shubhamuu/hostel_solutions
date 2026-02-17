@@ -77,12 +77,7 @@ const AllUsersCard = () => {
                 </span>
               </div>
               
-              <div className="flex justify-between">
-                <span className="text-gray-500">Verified:</span>
-                <span className={user.isVerified ? 'text-green-600' : 'text-red-600'}>
-                  {user.isVerified ? 'Yes' : 'No'}
-                </span>
-              </div>
+          
               
               {user.hostelname && (
                 <div className="flex justify-between">

@@ -19,20 +19,14 @@ const NavBar = () => {
 
   /* ---------------- THEME ---------------- */
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const activeTheme = savedTheme || (prefersDark ? "dark" : "light");
+    
+    const activeTheme = "dark";
 
     setTheme(activeTheme);
     document.documentElement.classList.toggle("dark", activeTheme === "dark");
   }, []);
 
-  const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    localStorage.setItem("theme", next);
-    document.documentElement.classList.toggle("dark", next === "dark");
-  };
+
 
   /* ---------------- USER ---------------- */
   useEffect(() => {

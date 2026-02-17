@@ -12,7 +12,7 @@ const HostelSchema = new Schema({
   },
   images: [
     {
-      url: { type: String, required: true },
+      url: { type: String },
       uploadedAt: { type: Date, default: Date.now }
     }
   ],

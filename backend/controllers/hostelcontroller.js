@@ -2,9 +2,10 @@
 
 const Hostel = require('../models/hostel');
 const getUserFromToken = require('../utils/getuserFromToken');
-const{verifyToken} = require('../utils/jwtauth');
+const { verifyToken } = require('../utils/jwtauth');
 const User = require('../models/User');
 const Room = require('../models/Room');
+const mongoose = require('mongoose');
 
 
 
@@ -88,18 +89,18 @@ exports.getAllHostelsForStudent = async (req, res) => {
   try {
     // 1. Fetching all documents without field restrictions (.select)
     // We still populate adminId to get the owner's basic contact info
-    const hostels = await Hostel.find({isActive: true})
-      .populate('adminId', 'name email phoneNumber') 
+    const hostels = await Hostel.find({ isActive: true })
+      .populate('adminId', 'name email phoneNumber')
       .lean(); // Returns plain JSON for better performance
-    
+
     // 2. Check if the collection is empty
     if (!hostels || hostels.length === 0) {
-        return res.status(200).json({ 
-          success: true, 
-          message: 'No hostels found in the database', 
-          data: [] 
-        });
-      }
+      return res.status(200).json({
+        success: true,
+        message: 'No hostels found in the database',
+        data: []
+      });
+    }
     // 3. Return the full dataset
     res.status(200).json({
       success: true,
@@ -109,10 +110,10 @@ exports.getAllHostelsForStudent = async (req, res) => {
 
   } catch (err) {
     console.error('Fetch All Hostels Error:', err);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Internal Server Error', 
-      error: err.message 
+    res.status(500).json({
+      success: false,
+      message: 'Internal Server Error',
+      error: err.message
     });
   }
 };
@@ -122,7 +123,7 @@ exports.addHostelImages = async (req, res) => {
     const user = getUserFromToken(req.headers.authorization?.split(' ')[1]);
     const userdetails = await User.findOne({ email: user.email });
 
-    if(userdetails.approvalStatus !== 'APPROVED'){
+    if (userdetails.approvalStatus !== 'APPROVED') {
       return res.status(403).json({ message: "Only approved admins can add hostel images" });
     }
     const hostelId = userdetails.managedHostelId;
@@ -150,23 +151,23 @@ exports.addHostelImages = async (req, res) => {
   }
 };
 
-exports.getHostelDetails = async (req, res)=> {
-try{
- const token = verifyToken(req.headers.authorization?.split(" ")[1]);
+exports.getHostelDetails = async (req, res) => {
+  try {
+    const token = verifyToken(req.headers.authorization?.split(" ")[1]);
     const useremail = token.email;
 
-    const adminDetail =await User.findOne({email : useremail});
- const hostelDetail = await Hostel.findOne({adminId : adminDetail._id});
-  if(!hostelDetail){
-    res.status(400).json({message:"no hostel found for admin"});
+    const adminDetail = await User.findOne({ email: useremail });
+    const hostelDetail = await Hostel.findOne({ adminId: adminDetail._id });
+    if (!hostelDetail) {
+      res.status(400).json({ message: "no hostel found for admin" });
 
-  }
-   res.status(200).json({
+    }
+    res.status(200).json({
       success: true,
       data: hostelDetail
     });
 
-}  catch (err) {
+  } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
@@ -194,32 +195,31 @@ exports.updateHostelDetails = async (req, res) => {
     }
 
     // 4. Update hostel details
-    const { name, address, isActive,location } = req.body;
+    const { name, address, isActive, location } = req.body;
 
-    if (name)
-      {
-         hostelDetail.name = name;
-         adminDetail.hostelname=name;
-      }
+    if (name) {
+      hostelDetail.name = name;
+      adminDetail.hostelname = name;
+    }
     if (address) hostelDetail.address = address;
     if (typeof isActive === "boolean") hostelDetail.isActive = isActive;
-   if (
-  location &&
-  location.type === "Point" &&
-  Array.isArray(location.coordinates) &&
-  location.coordinates.length === 2
-) {
-  hostelDetail.location = {
-    type: "Point",
-    coordinates: [
-      Number(location.coordinates[0]), // lng
-      Number(location.coordinates[1]), // lat
-    ],
-  };
-}
+    if (
+      location &&
+      location.type === "Point" &&
+      Array.isArray(location.coordinates) &&
+      location.coordinates.length === 2
+    ) {
+      hostelDetail.location = {
+        type: "Point",
+        coordinates: [
+          Number(location.coordinates[0]), // lng
+          Number(location.coordinates[1]), // lat
+        ],
+      };
+    }
     // 5. Save changes
     const updatedHostel = await hostelDetail.save();
-  await adminDetail.save();
+    await adminDetail.save();
     res.status(200).json({
       success: true,
       message: "Hostel details updated successfully",
@@ -270,4 +270,176 @@ exports.deleteHostelImage = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+
+// Controller: Get all hostels with student count (for Super Admin)
+exports.getAllHostelsForSuperAdmin = async (req, res) => {
+  try {
+    // Fetch all hostels and populate admin details
+    const hostels = await Hostel.find()
+      .populate('adminId', 'name email approvalStatus')
+      .lean();
+
+    // For each hostel, count the number of students
+    const hostelsWithStudentCount = await Promise.all(
+      hostels.map(async (hostel) => {
+        const studentCount = await User.countDocuments({
+          hostelId: hostel._id,
+          role: 'STUDENT'
+
+        });
+
+        return {
+          ...hostel,
+          studentCount
+        };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      count: hostelsWithStudentCount.length,
+      data: hostelsWithStudentCount
+    });
+
+  } catch (err) {
+    console.error('Fetch All Hostels For SuperAdmin Error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Internal Server Error',
+      error: err.message
+    });
+  }
+};
+
+// Controller: Delete hostel and admin (Super Admin only)
+// Controller: Delete hostel and admin (Super Admin only) - WITH TRANSACTION
+exports.deleteHostel = async (req, res) => {
+  // Start a session for transaction
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { hostelId, reason } = req.body;
+
+    // Validation
+    if (!hostelId || !reason) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({
+        success: false,
+        message: 'Hostel ID and deletion reason are required'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(hostelId)) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid hostel ID format'
+      });
+    }
+
+    // Find the hostel with transaction
+    const hostel = await Hostel.findById(hostelId)
+      .populate('adminId')
+      .session(session);
+
+    if (!hostel) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({
+        success: false,
+        message: 'Hostel not found'
+      });
+    }
+
+    // Store details before deletion (for email and response)
+    const adminEmail = hostel.adminId?.email;
+    const adminName = hostel.adminId?.name || 'Admin';
+    const hostelName = hostel.name;
+    const adminId = hostel.adminId?._id;
+
+    // 1. Delete all bookings associated with this hostel
+    const bookingDeleteResult = await mongoose.model('Booking').deleteMany(
+      { hostelId: hostel._id },
+      { session }
+    );
+
+    // 2. Delete all fees associated with this hostel
+    const feeDeleteResult = await mongoose.model('Fee').deleteMany(
+      { hostelId: hostel._id },
+      { session }
+    );
+
+    // 3. Delete all rooms associated with this hostel
+    const roomDeleteResult = await Room.deleteMany(
+      { hostelId: hostel._id },
+      { session }
+    );
+
+    // 4. Update all students who were in this hostel (remove references)
+    const studentUpdateResult = await User.updateMany(
+      { hostelId: hostel._id },
+      {
+        $set: {
+          hostelId: null,
+          roomId: null
+        }
+      },
+      { session }
+    );
+
+    // 5. Delete the hostel itself
+    await Hostel.findByIdAndDelete(hostelId, { session });
+
+    // 6. Delete the admin user if exists
+    if (adminId) {
+      await User.findByIdAndDelete(adminId, { session });
+    }
+
+    // Commit the transaction (all or nothing)
+    await session.commitTransaction();
+    session.endSession();
+
+    // Send email notification to admin (after successful deletion)
+    // This is outside transaction as it's not critical to database consistency
+    if (adminEmail) {
+      const { sendHostelDeletionEmail } = require('../utils/sendotp');
+      sendHostelDeletionEmail(adminEmail, adminName, hostelName, reason)
+        .catch(err => console.error('Failed to send deletion email:', err));
+    }
+
+    // Return success with deletion statistics
+    res.status(200).json({
+      success: true,
+      message: 'Hostel and all related data deleted successfully',
+      data: {
+        deletedHostel: hostelName,
+        deletedAdmin: adminName,
+        statistics: {
+          bookingsDeleted: bookingDeleteResult.deletedCount || 0,
+          feesDeleted: feeDeleteResult.deletedCount || 0,
+          roomsDeleted: roomDeleteResult.deletedCount || 0,
+          studentsUpdated: studentUpdateResult.modifiedCount || 0,
+          adminDeleted: !!adminId
+        },
+        emailSent: !!adminEmail
+      }
+    });
+
+  } catch (err) {
+    // Rollback transaction on any error
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error('Delete Hostel Error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete hostel. All changes have been rolled back.',
+      error: err.message
+    });
+  }
+};
+
 
