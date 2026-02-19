@@ -7,7 +7,8 @@ import {
   Phone,
   Building,
   Image as ImageIcon,
-  ChevronRight
+  ChevronRight,
+  Navigation
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import NavBar from "../../components/common/navbar";
@@ -17,6 +18,13 @@ const HostelDetails = () => {
   const navigate = useNavigate();
   const { data, loading } = useFetch("/hostels");
   const hostels = Array.isArray(data?.data) ? data.data : [];
+
+  const handleGetDirections = (hostel) => {
+    if (!hostel.location?.coordinates) return;
+    const [lng, lat] = hostel.location.coordinates; // MongoDB GeoJSON: [lng, lat]
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    window.location.href = url; // Redirect to Google Maps
+  };
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0B0D10] text-gray-900 dark:text-white transition-colors">
@@ -120,19 +128,36 @@ const HostelDetails = () => {
                         </p>
                       )}
 
-                      <button
-                        onClick={() => navigate(`/rooms/${hostel._id}`)}
-                        className="mt-auto self-start flex items-center gap-2
-                                   px-6 py-3 rounded-xl
-                                   bg-gradient-to-r from-amber-500 to-orange-500
-                                   text-black font-semibold
-                                   hover:scale-[1.03] transition"
-                      >
-                        View Rooms
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    </div>
+                      {/* BUTTONS */}
+                      <div className="flex flex-col sm:flex-row gap-3 mt-auto">
+                        <button
+                          onClick={() => navigate(`/rooms/${hostel._id}`)}
+                          className="flex items-center justify-center gap-2
+                                     px-6 py-3 rounded-xl
+                                     bg-gradient-to-r from-amber-500 to-orange-500
+                                     text-black font-semibold
+                                     hover:scale-[1.03] transition"
+                        >
+                          View Rooms
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
 
+                        {hostel.location?.coordinates && (
+                          <button
+                            onClick={() => handleGetDirections(hostel)}
+                            className="flex items-center justify-center gap-2
+                                       px-6 py-3 rounded-xl
+                                       bg-gradient-to-r from-amber-500 to-orange-500
+                                       text-black font-semibold
+                                       hover:scale-[1.03] transition"
+                          >
+                            <Navigation size={16} />
+                            Get Directions
+                          </button>
+                        )}
+                      </div>
+
+                    </div>
                   </div>
                 </div>
               ))}

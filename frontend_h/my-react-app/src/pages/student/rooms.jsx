@@ -302,6 +302,16 @@ const handleLeaveRoom = async () => {
           {/* Right Column - Quick Info & Actions */}
           <div className="space-y-6">
             {/* Quick Stats */}
+            <button
+  onClick={() => setShowLeaveConfirm(true)}
+  className="inline-flex px-30 py-5 bg-rose-600/20 hover:bg-rose-600/30 
+             text-rose-400 rounded text-xs 
+             items-center gap-1
+             border border-rose-700"
+>
+  <AlertTriangle size={18} />
+  <span>Leave Room</span>
+</button>
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700 p-6">
               <h3 className="text-lg font-semibold text-white mb-4">Room Status</h3>
               <div className="space-y-4">
@@ -355,13 +365,9 @@ const handleLeaveRoom = async () => {
           </div>
         </div>
       </div>
-<button
-  onClick={() => setShowLeaveConfirm(true)}
-  className="w-full p-3 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 rounded-lg transition-colors text-left flex items-center gap-3 border border-rose-700"
->
-  <AlertTriangle size={18} />
-  <span>Leave Room</span>
-</button>
+
+
+
 
       {/* Image Modal */}
       {selectedImage && (

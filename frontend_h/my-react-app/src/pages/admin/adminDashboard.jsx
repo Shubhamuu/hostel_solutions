@@ -23,7 +23,7 @@ const AdminDashboard = () => {
     { to: "/admin/menu", icon: "🍽️", label: "Update Menu" },
     { to: "/admin/rooms", icon: "🏠", label: "Room Management" },
     { to: "/admin/students", icon: "👨‍🎓", label: "View Students" },
-    { to: "/admin/hostel-images", icon: "🖼️", label: "Add Hostel Images" },
+   // { to: "/admin/hostel-images", icon: "🖼️", label: "Add Hostel Images" },
     { to: "/admin/bookingDetails", icon: "🏠", label: "Booking Details" },
     {to:"/admin/hostelDetail", icon: "🏠",label:"hostel Details" }
   ];
@@ -32,7 +32,9 @@ const AdminDashboard = () => {
     
       
 <div className="min-h-screen bg-gradient-to-br from-[#0B0D10] via-[#111827] to-[#0B0D10] px-4 py-8 sm:px-6 lg:px-8 text-white">
-  <AdminNavbar />
+  <header className="sticky top-0 z-50 w-full">
+    <AdminNavbar />
+  </header>
   
   <div className="max-w-7xl mx-auto">
     {/* Header */}

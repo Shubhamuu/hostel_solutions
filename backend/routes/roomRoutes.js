@@ -18,6 +18,7 @@ router.get('/getAllBooking',isAdmin, roomController.getAllBookings);
 // Static route for booking details
 router.get('/mybookings', isUser, roomController.getBookingDetails);
 router.post('/cancelbooking',isUser,roomController.cancelBooking);
+router.post('/cancelBookingAdmin',isAdmin, roomController.cancelBooking);
 // Dynamic route for available rooms
 router.get('/:hostelId', roomController.availableRooms);
 router.post('/leave/:roomId',isUser,roomController.leaveRoom);

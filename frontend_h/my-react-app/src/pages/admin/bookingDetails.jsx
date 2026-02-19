@@ -86,6 +86,31 @@ const handleConfirmBooking = async (booking) => {
     setConfirmingId(null);
   }
 };
+const handleCancelBooking = async (bookingId) => {
+  try {
+    setConfirmingId(bookingId);
+
+    await apiprivate.post("/rooms/cancelBookingAdmin", {
+      bookingId,
+    });
+
+    // Optimistic UI update
+    setBookings((prev) =>
+      prev.map((b) =>
+        b._id === bookingId
+          ? { ...b, status: "CANCELLED" }
+          : b
+      )
+    );
+  } catch (err) {
+    alert(
+      err.response?.data?.message ||
+      "Failed to cancel booking"
+    );
+  } finally {
+    setConfirmingId(null);
+  }
+};
 
   const statusStats = useMemo(() => {
     const stats = {
@@ -387,6 +412,11 @@ const handleConfirmBooking = async (booking) => {
                           </span>
                           {booking.status === "PENDING" && (
   <div className="mt-4 flex justify-end">
+   
+    {booking.status === "PENDING" && (
+  <div className="mt-4 flex justify-end gap-3">
+    
+    {/* Confirm Booking */}
     <button
       onClick={(e) => {
         e.stopPropagation();
@@ -401,15 +431,35 @@ const handleConfirmBooking = async (booking) => {
       {confirmingId === booking._id ? (
         <>
           <Loader2 className="animate-spin" size={18} />
-          Confirming...
+          Processing...
         </>
       ) : (
         <>
           <CheckCircle size={18} />
-          Confirm Booking
+          Confirm
         </>
       )}
     </button>
+
+    {/* Cancel Booking */}
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleCancelBooking(booking._id);
+      }}
+      disabled={confirmingId === booking._id}
+      className="flex items-center gap-2 px-4 py-2 rounded-lg
+        bg-red-600 hover:bg-red-700
+        disabled:bg-gray-600 disabled:cursor-not-allowed
+        transition-all text-white font-medium"
+    >
+      <XCircle size={18} />
+      Cancel
+    </button>
+
+  </div>
+)}
+
   </div>
 )}
 

@@ -165,8 +165,8 @@ export default function SuperAdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0B0D10] via-[#111827] to-[#0B0D10] px-4 py-8 sm:px-6 lg:px-8 text-white">
-      <SuperAdminSimpleNavbar />
+   <div className="min-h-screen bg-gray-950 text-gray-100">
+            <SuperAdminSimpleNavbar />
       <div className="max-w-7xl mx-auto">
        
 
